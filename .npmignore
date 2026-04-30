@@ -1,0 +1,38 @@
+# Source files
+src/
+
+# Tests
+*.test.ts
+
+# Coverage
+coverage/
+
+# Development files
+vite.config.ts
+tsdown.config.ts
+tsconfig.json
+scripts/test-exports.*
+RELEASING.md
+
+#Docs
+docs/
+
+# CI
+.github/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node modules (always excluded)
+node_modules/
+package-lock.json
+
+# OS
+.DS_Store

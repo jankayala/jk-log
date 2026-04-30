@@ -1,0 +1,10 @@
+/node_modules
+/dist
+/coverage
+
+*.tgz
+
+.env
+.DS_Store
+.vscode
+.idea
