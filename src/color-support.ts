@@ -1,5 +1,5 @@
 /**
- * Centralized color policy for ansilog.
+ * Centralized color policy for ansilogger.
  *
  * Priority (highest → lowest):
  *  1. NO_COLOR=<any non-empty string>  → always disable colors

@@ -1,10 +1,10 @@
-# ansilog
+# ansilogger
 
 A tiny Node.js utility that enhances console.log with ANSI colors and formatting, making terminal output cleaner, more readable, and visually expressive with minimal setup.
 
 ## Overview
 
-`ansilog` provides small, lightweight helpers and a logger to enrich terminal output with ANSI colors and formatting.
+`ansilogger` provides small, lightweight helpers and a logger to enrich terminal output with ANSI colors and formatting.
 
 Main exports:
 
@@ -16,13 +16,13 @@ Main exports:
 Install from npm:
 
 ```bash
-npm install ansilog
+npm install ansilogger
 ```
 
 ## Quick examples
 
 ```ts
-import { logger, styled } from "ansilog";
+import { logger, styled } from "ansilogger";
 
 logger.log("Hello world!");
 
@@ -48,7 +48,7 @@ Color hints:
 - Set `FORCE_COLOR=1` (any non-empty value) to force colors.
 - By default, colors are enabled when stdout is a TTY.
 
-Example: [`./examples/basic.ts`](https://github.com/jankayala/ansilog/blob/main/examples/basic.ts)
+Example: [`./examples/basic.ts`](https://github.com/jankayala/ansilogger/blob/main/examples/basic.ts)
 
 ## API overview
 
