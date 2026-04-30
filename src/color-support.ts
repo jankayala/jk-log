@@ -1,5 +1,5 @@
 /**
- * Centralized color policy for styled-log-ts.
+ * Centralized color policy for ansilog.
  *
  * Priority (highest → lowest):
  *  1. NO_COLOR=<any non-empty string>  → always disable colors
