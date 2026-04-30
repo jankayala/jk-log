@@ -4,7 +4,7 @@ A tiny Node.js utility that enhances console.log with ANSI colors and formatting
 
 ## Overview
 
-`ansilogger` provides small, lightweight helpers and a logger to enrich terminal output with ANSI colors and formatting.
+`jk-log` provides small, lightweight helpers and a logger to enrich terminal output with ANSI colors and formatting.
 
 Main exports:
 
@@ -16,13 +16,13 @@ Main exports:
 Install from npm:
 
 ```bash
-npm install ansilogger
+npm install jk-log
 ```
 
 ## Quick examples
 
 ```ts
-import { logger, styled } from "ansilogger";
+import { logger, styled } from "jk-log";
 
 logger.log("Hello world!");
 
@@ -48,7 +48,7 @@ Color hints:
 - Set `FORCE_COLOR=1` (any non-empty value) to force colors.
 - By default, colors are enabled when stdout is a TTY.
 
-Example: [`./examples/basic.ts`](https://github.com/jankayala/ansilogger/blob/main/examples/basic.ts)
+Example: [`./examples/basic.ts`](https://github.com/jankayala/jk-log/blob/main/examples/basic.ts)
 
 ## API overview
 
