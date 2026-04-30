@@ -1,17 +1,17 @@
 {
-  "name": "ansilogger",
+  "name": "jk-log",
   "version": "1.0.0",
   "description": "A tiny Node.js utility that enhances console.log with ANSI colors and formatting, making terminal output cleaner, more readable, and visually expressive with minimal setup.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jankayala/ansilogger.git"
+    "url": "git+https://github.com/jankayala/jk-log.git"
   },
   "bugs": {
-    "url": "https://github.com/jankayala/ansilogger/issues"
+    "url": "https://github.com/jankayala/jk-log/issues"
   },
-  "homepage": "https://github.com/jankayala/ansilogger#readme",
+  "homepage": "https://github.com/jankayala/jk-log#readme",
   "keywords": [
-    "ansilogger",
+    "jk-log",
     "logging",
     "console",
     "ansi",

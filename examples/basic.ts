@@ -1,4 +1,4 @@
-// A compact set of examples that showcases the strengths of `ansilogger`:
+// A compact set of examples that showcases the strengths of `jk-log`:
 // - easy, chainable styling (named colors, rgb/hex, background colors)
 // - logger convenience proxy (behaves like console.log but with style helpers)
 // - TypeScript types and safe runtime errors for invalid chains
