@@ -67,7 +67,7 @@ export type StyleName = keyof typeof ANSI_CODES;
 const COLOR_NAMES = new Set<string>(Object.keys(COLOR_CODES));
 const BG_COLOR_NAMES = new Set<string>(Object.keys(BG_COLOR_CODES));
 
-type ForegroundStyleOptions =
+type TextStyleOptions =
   | {
       color?: ColorName;
       rgb?: never;
@@ -111,7 +111,7 @@ type BackgroundStyleOptions =
       bgHex?: never;
     };
 
-export type StyleOptions = ForegroundStyleOptions &
+export type StyleOptions = TextStyleOptions &
   BackgroundStyleOptions & {
     modifiers?: ModifierName | ModifierName[];
   };
@@ -124,8 +124,8 @@ type RgbStyle = {
 type AppliedStyle = StyleName | RgbStyle;
 
 type StyleAnalysis = {
-  foregrounds: string[];
-  backgrounds: string[];
+  textStyles: string[];
+  backgroundStyles: string[];
 };
 
 type Styled = {
@@ -193,7 +193,7 @@ function formatStyleName(style: AppliedStyle): string {
   return `${style.kind}(${red}, ${green}, ${blue})`;
 }
 
-function isForegroundStyle(style: AppliedStyle): boolean {
+function isTextStyle(style: AppliedStyle): boolean {
   return typeof style === "string" ? COLOR_NAMES.has(style) : style.kind === "rgb";
 }
 
@@ -224,15 +224,15 @@ function applyStyle(text: string, style: AppliedStyle): string {
 
 function analyzeStyles(styles: AppliedStyle[]): StyleAnalysis {
   const foregrounds: string[] = [];
-  const backgrounds: string[] = [];
+  const backgroundStyles: string[] = [];
 
   for (const style of styles) {
     const formatted = formatStyleName(style);
-    if (isForegroundStyle(style)) foregrounds.push(formatted);
-    if (isBackgroundStyle(style)) backgrounds.push(formatted);
+    if (isTextStyle(style)) foregrounds.push(formatted);
+    if (isBackgroundStyle(style)) backgroundStyles.push(formatted);
   }
 
-  return { foregrounds, backgrounds };
+  return { textStyles: foregrounds, backgroundStyles: backgroundStyles };
 }
 
 function createStyled(
@@ -240,44 +240,90 @@ function createStyled(
   analysis: StyleAnalysis = analyzeStyles(styles),
 ): Styled {
   const fn = ((text: string) => {
-    if (analysis.foregrounds.length > 1) {
-      console.warn(
-        `[styled] Multiple foreground colors detected: [${analysis.foregrounds.join(", ")}]. ` +
-          `Only "${analysis.foregrounds[0]}" will be applied.`,
-      );
-    }
-    if (analysis.backgrounds.length > 1) {
-      console.warn(
-        `[styled] Multiple background colors detected: [${analysis.backgrounds.join(", ")}]. ` +
-          `Only "${analysis.backgrounds[0]}" will be applied.`,
-      );
-    }
-
     return styles.reduce((acc, style) => applyStyle(acc, style), text);
   }) as Styled;
 
   return new Proxy(fn, {
     get(_, prop: string | symbol) {
       if (prop === "rgb") {
-        return (red: number, green: number, blue: number) =>
-          createStyled([...styles, createRgbStyle("rgb", red, green, blue)]);
+        return (red: number, green: number, blue: number) => {
+          const newStyle = createRgbStyle("rgb", red, green, blue);
+          if (analysis.textStyles.length > 0) {
+            throw new Error(
+              `[styled] Cannot chain multiple foreground colors: [${analysis.textStyles.join(", ")}] and ${formatStyleName(
+                newStyle,
+              )}`,
+            );
+          }
+
+          return createStyled([...styles, newStyle]);
+        };
       }
 
       if (prop === "bgRgb") {
-        return (red: number, green: number, blue: number) =>
-          createStyled([...styles, createRgbStyle("bgRgb", red, green, blue)]);
+        return (red: number, green: number, blue: number) => {
+          const newStyle = createRgbStyle("bgRgb", red, green, blue);
+          if (analysis.backgroundStyles.length > 0) {
+            throw new Error(
+              `[styled] Cannot chain multiple background colors: [${analysis.backgroundStyles.join(", ")}] and ${formatStyleName(
+                newStyle,
+              )}`,
+            );
+          }
+
+          return createStyled([...styles, newStyle]);
+        };
       }
 
       if (prop === "hex") {
-        return (value: string) => createStyled([...styles, createHexStyle("rgb", value)]);
+        return (value: string) => {
+          const newStyle = createHexStyle("rgb", value);
+          if (analysis.textStyles.length > 0) {
+            throw new Error(
+              `[styled] Cannot chain multiple foreground colors: [${analysis.textStyles.join(", ")}] and ${formatStyleName(
+                newStyle,
+              )}`,
+            );
+          }
+
+          return createStyled([...styles, newStyle]);
+        };
       }
 
       if (prop === "bgHex") {
-        return (value: string) => createStyled([...styles, createHexStyle("bgRgb", value)]);
+        return (value: string) => {
+          const newStyle = createHexStyle("bgRgb", value);
+          if (analysis.backgroundStyles.length > 0) {
+            throw new Error(
+              `[styled] Cannot chain multiple background colors: [${analysis.backgroundStyles.join(", ")}] and ${formatStyleName(
+                newStyle,
+              )}`,
+            );
+          }
+
+          return createStyled([...styles, newStyle]);
+        };
       }
 
       if (typeof prop === "string" && prop in ANSI_CODES) {
-        return createStyled([...styles, prop as StyleName]);
+        const newStyle = prop as StyleName;
+        if (isTextStyle(newStyle) && analysis.textStyles.length > 0) {
+          throw new Error(
+            `[styled] Cannot chain multiple foreground colors: [${analysis.textStyles.join(", ")}] and ${formatStyleName(
+              newStyle,
+            )}`,
+          );
+        }
+
+        if (isBackgroundStyle(newStyle) && analysis.backgroundStyles.length > 0) {
+          throw new Error(
+            `[styled] Cannot chain multiple background colors: [${analysis.backgroundStyles.join(", ")}] and ${formatStyleName(
+              newStyle,
+            )}`,
+          );
+        }
+
+        return createStyled([...styles, newStyle]);
       }
 
       throw new Error(`Unknown style: ${String(prop)}`);

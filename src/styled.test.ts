@@ -20,13 +20,13 @@ const validStyleOptionsSamples: StyleOptions[] = [
 void validStyleOptionsSamples;
 
 // @ts-expect-error `color` and `rgb` are mutually exclusive.
-const invalidForegroundRgbOptions: StyleOptions = {
+const invalidTextRgbOptions: StyleOptions = {
   color: "red",
   rgb: [1, 2, 3] as [number, number, number],
 };
 
 // @ts-expect-error `color` and `hex` are mutually exclusive.
-const invalidForegroundHexOptions: StyleOptions = {
+const invalidTextHexOptions: StyleOptions = {
   color: "red",
   hex: "#ff0000",
 };
@@ -44,8 +44,8 @@ const invalidBackgroundHexOptions: StyleOptions = {
 };
 
 void [
-  invalidForegroundRgbOptions,
-  invalidForegroundHexOptions,
+  invalidTextRgbOptions,
+  invalidTextHexOptions,
   invalidBackgroundRgbOptions,
   invalidBackgroundHexOptions,
 ];
@@ -69,6 +69,7 @@ describe("styled", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
+
   describe("color application", () => {
     it("should apply single color with dot notation", () => {
       const result = styled.red("Hello");
@@ -92,25 +93,23 @@ describe("styled", () => {
       },
     );
 
-    it("should warn when multiple foreground colors are applied", () => {
-      styled.red.blue("Hello");
-      expect(consoleWarnSpy).toHaveBeenCalled();
+    it("should throw when multiple text colors are chained (dot notation)", () => {
+      expect(() => styled.red.blue("Hello")).toThrow();
     });
 
-    it("should warn when multiple foreground colors are applied", () => {
-      styled.red.rgb(50, 50, 50)("Hello");
-      expect(consoleWarnSpy).toHaveBeenCalled();
+    it("should throw when multiple text colors are chained (rgb)", () => {
+      expect(() => styled.red.rgb(50, 50, 50)("Hello")).toThrow();
     });
 
-    it("should apply rgb foreground colors", () => {
+    it("should apply rgb text colors", () => {
       expect(styled.rgb(50, 50, 50)("Hello")).toBe("\x1b[38;2;50;50;50mHello\x1b[39m");
     });
 
-    it("should apply hex foreground colors", () => {
+    it("should apply hex text colors", () => {
       expect(styled.hex("#336699")("Hello")).toBe("\x1b[38;2;51;102;153mHello\x1b[39m");
     });
 
-    it("should expand shorthand hex foreground colors", () => {
+    it("should expand shorthand hex text colors", () => {
       expect(styled.hex("#abc")("Hello")).toBe("\x1b[38;2;170;187;204mHello\x1b[39m");
     });
 
@@ -147,14 +146,24 @@ describe("styled", () => {
       },
     );
 
-    it("should warn when multiple background colors are applied", () => {
-      styled.bgRed.bgBlue("Hello");
-      expect(consoleWarnSpy).toHaveBeenCalled();
+    it("should throw when multiple background colors are chained (dot notation)", () => {
+      expect(() => styled.bgRed.bgBlue("Hello")).toThrow();
     });
 
-    it("should warn when multiple background colors are applied", () => {
-      styled.bgRed.bgRgb(10, 20, 30)("Hello");
-      expect(consoleWarnSpy).toHaveBeenCalled();
+    it("should throw when multiple background colors are chained (bgRgb)", () => {
+      expect(() => styled.bgRed.bgRgb(10, 20, 30)("Hello")).toThrow();
+    });
+
+    it("throws when chaining a background hex after an existing background color", () => {
+      expect(() => {
+        styled.bgRed.bgHex("#fff")("text");
+      }).toThrow(/Cannot chain multiple background colors/);
+    });
+
+    it("throws when chaining bgHex after bgRgb", () => {
+      expect(() => {
+        styled.bgRgb(1, 2, 3).bgHex("#000")("x");
+      }).toThrow(/Cannot chain multiple background colors/);
     });
 
     it("should apply rgb background colors", () => {

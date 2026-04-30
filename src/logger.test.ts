@@ -72,13 +72,10 @@ describe("logger.ts)", () => {
   });
 
   it("supports rgb/hex chain after an initial style (exercises createSimpleStyled branches)", () => {
-    // chain rgb after a named style
-    logger.red.rgb(1, 2, 3)("chained rgb");
-    const calledRgb = logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string;
-    expect(calledRgb).toContain("chained rgb");
-    expect(calledRgb).toContain("\x1b[38;2;1;2;3m");
+    // chaining a rgb foreground after an existing foreground should now throw
+    expect(() => logger.red.rgb(1, 2, 3)("chained rgb")).toThrow();
 
-    // chain bgHex after a named style
+    // chaining a bgHex after a modifier (no foreground conflict) is allowed
     logger.bold.bgHex("#040506")("chained bgHex");
     const calledBgHex = logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string;
     expect(calledBgHex).toContain("chained bgHex");
@@ -86,15 +83,14 @@ describe("logger.ts)", () => {
   });
 
   it("supports bgRgb/hex chain after an initial style (remaining createSimpleStyled branches)", () => {
+    // chaining a background rgb after a foreground is allowed
     logger.red.bgRgb(7, 8, 9)("chained bgRgb");
     const calledBgRgb = logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string;
     expect(calledBgRgb).toContain("chained bgRgb");
     expect(calledBgRgb).toContain("\x1b[48;2;7;8;9m");
 
-    logger.red.hex("#112233")("chained hex");
-    const calledHex = logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string;
-    expect(calledHex).toContain("chained hex");
-    expect(calledHex).toContain("\x1b[38;2;17;34;51m");
+    // chaining a hex foreground after an existing foreground should now throw
+    expect(() => logger.red.hex("#112233")("chained hex")).toThrow();
   });
 
   it("supports hex and bgHex chainables", () => {

@@ -1,6 +1,6 @@
 import { styled, ANSI_CODES, type StyleName } from "@/styled";
 
-export type SimpleLogger = { log: (...args: unknown[]) => void } & typeof styled;
+export type AnsiLogger = { log: (...args: unknown[]) => void } & typeof styled;
 
 function createSimpleStyled(currentStyle: typeof styled = styled) {
   const fn = (text: string) => {
@@ -35,7 +35,7 @@ function createSimpleStyled(currentStyle: typeof styled = styled) {
   }) as unknown as typeof styled;
 }
 
-function createSimpleLogger(): SimpleLogger {
+function createAnsiLogger(): AnsiLogger {
   const base = {
     log(...args: unknown[]) {
       // behave like console.log by default
@@ -48,7 +48,7 @@ function createSimpleLogger(): SimpleLogger {
     },
   };
 
-  return new Proxy(base as unknown as SimpleLogger, {
+  return new Proxy(base as unknown as AnsiLogger, {
     get(target, prop: string | symbol) {
       if (typeof prop === "string" && prop in target) {
         const value = (target as any)[prop as string];
@@ -77,7 +77,7 @@ function createSimpleLogger(): SimpleLogger {
 
       return undefined;
     },
-  }) as SimpleLogger;
+  }) as AnsiLogger;
 }
 
-export const logger = createSimpleLogger();
+export const logger = createAnsiLogger();
