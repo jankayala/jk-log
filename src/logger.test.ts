@@ -74,6 +74,41 @@ describe("logger.ts)", () => {
     expect(logSpy).toHaveBeenCalled();
   });
 
+  it("trace() with no arguments still calls console.trace", () => {
+    const traceSpy = vi.spyOn(console, "trace").mockImplementation(() => {});
+    logger.trace();
+    expect(traceSpy).toHaveBeenCalled();
+    traceSpy.mockRestore();
+  });
+
+  it("debug() with no arguments still calls console.debug", () => {
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    logger.debug();
+    expect(debugSpy).toHaveBeenCalled();
+    debugSpy.mockRestore();
+  });
+
+  it("info() with no arguments still calls console.info", () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    logger.info();
+    expect(infoSpy).toHaveBeenCalled();
+    infoSpy.mockRestore();
+  });
+
+  it("warn() with no arguments still calls console.warn", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    logger.warn();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("error() with no arguments still calls console.error", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    logger.error();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it("supports simple color chaining like logger.red(text)", () => {
     logger.red("styled text");
     expect(logSpy).toHaveBeenCalled();
