@@ -1,6 +1,13 @@
 import { styled, ANSI_CODES, type StyleName } from "@/styled";
 
-export type AnsiLogger = { log: (...args: unknown[]) => void } & typeof styled;
+export type Logger = {
+  log: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+  info: (...args: unknown[]) => void;
+  debug: (...args: unknown[]) => void;
+  trace: (...args: unknown[]) => void;
+} & typeof styled;
 
 function createSimpleStyled(currentStyle: typeof styled = styled) {
   const fn = (text: string) => {
@@ -35,10 +42,9 @@ function createSimpleStyled(currentStyle: typeof styled = styled) {
   }) as unknown as typeof styled;
 }
 
-function createAnsiLogger(): AnsiLogger {
+function createLogger(): Logger {
   const base = {
     log(...args: unknown[]) {
-      // behave like console.log by default
       if (args.length === 0) {
         console.log();
         return;
@@ -46,9 +52,50 @@ function createAnsiLogger(): AnsiLogger {
 
       console.log(...(args as any[]));
     },
+    trace(...args: unknown[]) {
+      if (args.length === 0) {
+        console.trace();
+        return;
+      }
+
+      console.trace(...(args as any[]));
+    },
+    debug(...args: unknown[]) {
+      if (args.length === 0) {
+        console.debug();
+        return;
+      }
+
+      console.debug(...(args as any[]));
+    },
+
+    info(...args: unknown[]) {
+      if (args.length === 0) {
+        console.info();
+        return;
+      }
+
+      console.info(...(args as any[]));
+    },
+    warn(...args: unknown[]) {
+      if (args.length === 0) {
+        console.warn();
+        return;
+      }
+
+      console.warn(...(args as any[]));
+    },
+    error(...args: unknown[]) {
+      if (args.length === 0) {
+        console.error();
+        return;
+      }
+
+      console.error(...(args as any[]));
+    },
   };
 
-  return new Proxy(base as unknown as AnsiLogger, {
+  return new Proxy(base as unknown as Logger, {
     get(target, prop: string | symbol) {
       if (typeof prop === "string" && prop in target) {
         const value = (target as any)[prop as string];
@@ -77,7 +124,7 @@ function createAnsiLogger(): AnsiLogger {
 
       return undefined;
     },
-  }) as AnsiLogger;
+  }) as Logger;
 }
 
-export const logger = createAnsiLogger();
+export const logger = createLogger();

@@ -98,6 +98,27 @@ describe("shouldUseColor", () => {
     );
   });
 
+  it("returns false when process.stdout is missing and no env overrides", () => {
+    const originalStdout = process.stdout;
+    Object.defineProperty(process, "stdout", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      withEnv({ NO_COLOR: undefined, FORCE_COLOR: undefined }, () =>
+        expect(shouldUseColor()).toBe(false),
+      );
+    } finally {
+      Object.defineProperty(process, "stdout", {
+        value: originalStdout,
+        writable: true,
+        configurable: true,
+      });
+    }
+  });
+
   it("returns false when NO_COLOR is empty string (empty = not set)", () => {
     // Empty string is treated the same as absent per the spec
     withEnv({ NO_COLOR: "", FORCE_COLOR: undefined }, () => {

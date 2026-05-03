@@ -34,6 +34,41 @@ describe("logger.ts)", () => {
     expect(logSpy).toHaveBeenCalledWith("arg1", 2, { three: 3 });
   });
 
+  it("trace() forwards arguments to console.trace unchanged", () => {
+    const traceSpy = vi.spyOn(console, "trace").mockImplementation(() => {});
+    logger.trace("trace1", 2, { three: 3 });
+    expect(traceSpy).toHaveBeenCalledWith("trace1", 2, { three: 3 });
+    traceSpy.mockRestore();
+  });
+
+  it("debug() forwards arguments to console.debug unchanged", () => {
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    logger.debug("debug1", 2, { three: 3 });
+    expect(debugSpy).toHaveBeenCalledWith("debug1", 2, { three: 3 });
+    debugSpy.mockRestore();
+  });
+
+  it("info() forwards arguments to console.info unchanged", () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    logger.info("info1", 2, { three: 3 });
+    expect(infoSpy).toHaveBeenCalledWith("info1", 2, { three: 3 });
+    infoSpy.mockRestore();
+  });
+
+  it("warn() forwards arguments to console.warn unchanged", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    logger.warn("warn1", 2, { three: 3 });
+    expect(warnSpy).toHaveBeenCalledWith("warn1", 2, { three: 3 });
+    warnSpy.mockRestore();
+  });
+
+  it("error() forwards arguments to console.error unchanged", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    logger.error("err1", 2, { three: 3 });
+    expect(errorSpy).toHaveBeenCalledWith("err1", 2, { three: 3 });
+    errorSpy.mockRestore();
+  });
+
   it("log() with no arguments still calls console.log", () => {
     logger.log();
     expect(logSpy).toHaveBeenCalled();

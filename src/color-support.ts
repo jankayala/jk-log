@@ -21,7 +21,12 @@ export function shouldUseColor(): boolean {
   }
 
   // Fall back to TTY detection
-  return !!process.stdout.isTTY;
+  return (
+    typeof process !== "undefined" &&
+    typeof process.stdout === "object" &&
+    process.stdout !== null &&
+    process.stdout.isTTY === true
+  );
 }
 
 /** Regex that matches all ANSI escape sequences. */
