@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `createLogger(options?)` factory for creating custom logger instances with configurable options:
+  - `showTime` — prepend ISO timestamp to log output.
+  - `format` — `"plain"` (default) or `"json"` for structured JSON log lines.
+  - `logLevel` — minimum log level (`trace`, `debug`, `info`, `warn`, `error`).
+  - `levelColors` — override the color used for each log level label.
+  - `levelLabels` — override the label text for each log level.
+- `logger.setLevel(level)` to change the minimum log level at runtime.
+- `LOG_LEVEL` environment variable support for setting the default log level.
+- `LoggerLogOptions` — pass inline style option objects to `logger.log()` for ad-hoc styling (color, rgb, hex, bgColor, bgRgb, bgHex, modifiers).
+- JSON format mode with circular-reference safety and BigInt serialization.
+- New examples: `examples/createLogger.ts` and `examples/logOptions.ts`.
+
 ### Changed
+
+- Updated README to document the full current API.
 
 ## [v1.0.1] - 2026-05-03
 

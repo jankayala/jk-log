@@ -143,7 +143,8 @@ function createSimpleStyled(loggerLog: (s: string) => void, currentStyle: typeof
     get(_, prop: string | symbol) {
       if (typeof prop === "string") {
         if (styleFns.has(prop)) {
-          return (...args: any[]) => createSimpleStyled(loggerLog, (currentStyle as any)[prop](...args));
+          return (...args: any[]) =>
+            createSimpleStyled(loggerLog, (currentStyle as any)[prop](...args));
         }
 
         if (prop in ANSI_CODES) {
@@ -208,20 +209,26 @@ function isLoggerLogOptions(value: unknown): value is LoggerLogOptions {
     "bgHex" in value;
   if (!hasKnownKey) return false;
 
-  if ("color" in value && value.color !== undefined && typeof value.color !== "string") return false;
+  if ("color" in value && value.color !== undefined && typeof value.color !== "string")
+    return false;
   if ("rgb" in value && value.rgb !== undefined && !isRgbTuple(value.rgb)) return false;
   if ("hex" in value && value.hex !== undefined && typeof value.hex !== "string") return false;
 
-  if ("bgColor" in value && value.bgColor !== undefined && typeof value.bgColor !== "string") return false;
+  if ("bgColor" in value && value.bgColor !== undefined && typeof value.bgColor !== "string")
+    return false;
   if ("bgRgb" in value && value.bgRgb !== undefined && !isRgbTuple(value.bgRgb)) return false;
-  if ("bgHex" in value && value.bgHex !== undefined && typeof value.bgHex !== "string") return false;
+  if ("bgHex" in value && value.bgHex !== undefined && typeof value.bgHex !== "string")
+    return false;
 
   if (countDefined([value.color, value.rgb, value.hex]) > 1) return false;
   if (countDefined([value.bgColor, value.bgRgb, value.bgHex]) > 1) return false;
 
   if ("modifiers" in value && value.modifiers !== undefined) {
     const mods = value.modifiers;
-    if (typeof mods !== "string" && !(Array.isArray(mods) && mods.every((m) => typeof m === "string"))) {
+    if (
+      typeof mods !== "string" &&
+      !(Array.isArray(mods) && mods.every((m) => typeof m === "string"))
+    ) {
       return false;
     }
   }
@@ -241,7 +248,12 @@ function applyLogOptions(text: string, options: LoggerLogOptions[]): string {
   let mergedBgHex: string | undefined;
 
   for (const option of options) {
-    const mods = option.modifiers === undefined ? [] : Array.isArray(option.modifiers) ? option.modifiers : [option.modifiers];
+    const mods =
+      option.modifiers === undefined
+        ? []
+        : Array.isArray(option.modifiers)
+          ? option.modifiers
+          : [option.modifiers];
     mergedModifiers.push(...mods);
     if (option.color !== undefined) mergedColor = option.color;
     if (option.rgb !== undefined) mergedRgb = option.rgb;
@@ -411,13 +423,20 @@ export function createLogger(options?: LoggerOptions): Logger {
       }
       if (typeof prop === "string") {
         if (prop in ANSI_CODES) {
-          return createSimpleStyled((s: string) => callLog("log", console.log.bind(console), [s]), (styled as any)[prop as StyleName]);
+          return createSimpleStyled(
+            (s: string) => callLog("log", console.log.bind(console), [s]),
+            (styled as any)[prop as StyleName],
+          );
         }
 
         // rgb/bgRgb/hex/bgHex are functions on `styled` that accept args
         const styleFns = new Set(["rgb", "bgRgb", "hex", "bgHex"]);
         if (styleFns.has(prop)) {
-          return (...args: any[]) => createSimpleStyled((s: string) => callLog("log", console.log.bind(console), [s]), (styled as any)[prop](...args));
+          return (...args: any[]) =>
+            createSimpleStyled(
+              (s: string) => callLog("log", console.log.bind(console), [s]),
+              (styled as any)[prop](...args),
+            );
         }
       }
 
