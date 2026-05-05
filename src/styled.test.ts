@@ -94,10 +94,12 @@ describe("styled", () => {
     );
 
     it("should throw when multiple text colors are chained (dot notation)", () => {
+      // @ts-ignore
       expect(() => styled.red.blue("Hello")).toThrow();
     });
 
     it("should throw when multiple text colors are chained (rgb)", () => {
+      // @ts-ignore
       expect(() => styled.red.rgb(50, 50, 50)("Hello")).toThrow();
     });
 
@@ -147,21 +149,25 @@ describe("styled", () => {
     );
 
     it("should throw when multiple background colors are chained (dot notation)", () => {
+      // @ts-ignore
       expect(() => styled.bgRed.bgBlue("Hello")).toThrow();
     });
 
     it("should throw when multiple background colors are chained (bgRgb)", () => {
+      // @ts-ignore
       expect(() => styled.bgRed.bgRgb(10, 20, 30)("Hello")).toThrow();
     });
 
     it("throws when chaining a background hex after an existing background color", () => {
       expect(() => {
+        // @ts-ignore
         styled.bgRed.bgHex("#fff")("text");
       }).toThrow(/Cannot chain multiple background colors/);
     });
 
     it("throws when chaining bgHex after bgRgb", () => {
       expect(() => {
+        // @ts-ignore
         styled.bgRgb(1, 2, 3).bgHex("#000")("x");
       }).toThrow(/Cannot chain multiple background colors/);
     });
@@ -225,7 +231,7 @@ describe("styled proxy additional coverage", () => {
     expect(() => (styled as any).unknown).toThrow("Unknown style: unknown");
   });
 
-  it("handles Symbol props in styled proxy (branch coverage)", () => {
-    expect(() => (styled as any)[Symbol("test")]).toThrow();
+  it("returns undefined for Symbol props in styled proxy", () => {
+    expect((styled as any)[Symbol("test")]).toBeUndefined();
   });
 });

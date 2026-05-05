@@ -111,8 +111,28 @@ type BackgroundStyleOptions =
       bgHex?: never;
     };
 
-export type StyleOptions = TextStyleOptions &
-  BackgroundStyleOptions & {
+type TextStyleConflictMessage = {
+  "Not allowed to define more than 1 text color style option": never;
+};
+
+type BackgroundStyleConflictMessage = {
+  "Not allowed to define more than 1 background color style option": never;
+};
+
+type TextStyleConflict = {
+  color?: ColorName;
+  rgb?: [number, number, number];
+  hex?: string;
+} & TextStyleConflictMessage;
+
+type BackgroundStyleConflict = {
+  bgColor?: BgColorName;
+  bgRgb?: [number, number, number];
+  bgHex?: string;
+} & BackgroundStyleConflictMessage;
+
+export type StyleOptions = (TextStyleOptions | TextStyleConflict) &
+  (BackgroundStyleOptions | BackgroundStyleConflict) & {
     modifiers?: ModifierName | ModifierName[];
   };
 
@@ -128,15 +148,48 @@ type StyleAnalysis = {
   backgroundStyles: string[];
 };
 
-type Styled = {
+export type StyledChain<
+  HasTextStyle extends boolean = false,
+  HasBackgroundStyle extends boolean = false,
+> = {
   (text: string): string;
-  rgb: (red: number, green: number, blue: number) => Styled;
-  bgRgb: (red: number, green: number, blue: number) => Styled;
-  hex: (value: string) => Styled;
-  bgHex: (value: string) => Styled;
+  rgb: HasTextStyle extends true
+    ? {
+        "Not allowed to chain more than 1 text color style option": never;
+      }
+    : (red: number, green: number, blue: number) => StyledChain<true, HasBackgroundStyle>;
+  bgRgb: HasBackgroundStyle extends true
+    ? {
+        "Not allowed to chain more than 1 background color style option": never;
+      }
+    : (red: number, green: number, blue: number) => StyledChain<HasTextStyle, true>;
+  hex: HasTextStyle extends true
+    ? {
+        "Not allowed to chain more than 1 text color style option": never;
+      }
+    : (value: string) => StyledChain<true, HasBackgroundStyle>;
+  bgHex: HasBackgroundStyle extends true
+    ? {
+        "Not allowed to chain more than 1 background color style option": never;
+      }
+    : (value: string) => StyledChain<HasTextStyle, true>;
 } & {
-  [K in StyleName]: Styled;
+  [K in ModifierName]: StyledChain<HasTextStyle, HasBackgroundStyle>;
+} & {
+  [K in ColorName]: HasTextStyle extends true
+    ? {
+        "Not allowed to chain more than 1 text color style option": never;
+      }
+    : StyledChain<true, HasBackgroundStyle>;
+} & {
+  [K in BgColorName]: HasBackgroundStyle extends true
+    ? {
+        "Not allowed to chain more than 1 background color style option": never;
+      }
+    : StyledChain<HasTextStyle, true>;
 };
+
+export type Styled = StyledChain;
 
 function normalizeRgbValue(value: number): number {
   if (!Number.isFinite(value)) {
@@ -245,6 +298,10 @@ function createStyled(
 
   return new Proxy(fn, {
     get(_, prop: string | symbol) {
+      if (typeof prop === "symbol") {
+        return undefined;
+      }
+
       if (prop === "rgb") {
         return (red: number, green: number, blue: number) => {
           const newStyle = createRgbStyle("rgb", red, green, blue);
@@ -331,4 +388,4 @@ function createStyled(
   });
 }
 
-export const styled = createStyled();
+export const styled = createStyled() as StyledChain<false, false>;

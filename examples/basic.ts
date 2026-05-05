@@ -42,14 +42,20 @@ console.log("Stripped:", stripAnsi(colored));
 // show shouldUseColor (respects NO_COLOR / FORCE_COLOR and TTY)
 console.log("shouldUseColor():", shouldUseColor());
 
-// Demonstrate that multiple foreground colors cannot be chained (runtime error)
+// Demonstrate that multiple foreground colors cannot be chained (styled)
 try {
-  // This attempts to chain two foreground colors and will throw
-  // (styled enforces a single foreground color per styled instance)
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-  styled.red.green("this will throw");
+  // @ts-ignore
+  styled.red.green("this is compile error");
 } catch (err) {
-  console.error("Chaining error caught as expected:", (err as Error).message);
+  console.error("Chaining styled error caught as expected:", (err as Error).message);
+}
+
+// Demonstrate that multiple foreground colors cannot be chained (logger)
+try {
+  // @ts-ignore
+  logger.red.green("this is compile error");
+} catch (err) {
+  console.error("Chaining logger error caught as expected:", (err as Error).message);
 }
 
 // The logger proxy offers the same ergonomic API but prints directly
