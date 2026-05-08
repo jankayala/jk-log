@@ -17,4 +17,3 @@ logger.info("info  — weight 30");
 logger.log("log   — weight 35");
 logger.warn("warn  — weight 40");
 logger.error("error — weight 50");
-

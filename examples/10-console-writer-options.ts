@@ -24,4 +24,3 @@ logger.debug("Also routed to console.log");
 logger.info("Also routed to console.log");
 logger.warn("Still goes to console.warn");
 logger.error("Still goes to console.error");
-
