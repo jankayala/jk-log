@@ -5,9 +5,11 @@ describe("index re-exports", () => {
   it("exports color-support", () => {
     expect(index.shouldUseColor).toBeDefined();
     expect(index.stripAnsi).toBeDefined();
+    expect(index.isBrowser).toBeDefined();
 
     expect(typeof index.shouldUseColor).toBe("function");
     expect(typeof index.stripAnsi).toBe("function");
+    expect(typeof index.isBrowser).toBe("function");
   });
 
   it("exports logger", () => {
@@ -24,6 +26,20 @@ describe("index re-exports", () => {
     expect(index.styled).toBeDefined();
 
     expect(typeof index.styled).toBe("function");
+  });
+
+  it("exports writers", () => {
+    expect(index.consoleWriter).toBeDefined();
+    expect(index.fileWriter).toBeDefined();
+    expect(index.httpWriter).toBeDefined();
+    expect(typeof index.consoleWriter).toBe("function");
+    expect(typeof index.fileWriter).toBe("function");
+    expect(typeof index.httpWriter).toBe("function");
+  });
+
+  it("exports invalidateColorCache", () => {
+    expect(index.invalidateColorCache).toBeDefined();
+    expect(typeof index.invalidateColorCache).toBe("function");
   });
 
   it("does not expose a default export", () => {

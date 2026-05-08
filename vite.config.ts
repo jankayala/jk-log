@@ -10,6 +10,9 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
+      exclude: [
+        "src/writers/index.ts", // barrel re-export file — no executable statements
+      ],
       thresholds: {
         lines: 100,
         functions: 100,

@@ -6,9 +6,12 @@ import {
   type BgColorName,
   type ModifierName,
 } from "@/styled";
+import { consoleWriter } from "@/writers";
+import type { LogWriter } from "@/writers";
 
+const STYLE_FN_NAMES = new Set(["rgb", "bgRgb", "hex", "bgHex"]);
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error";
-type MethodLogLevel = LogLevel | "log";
+export type MethodLogLevel = LogLevel | "log";
 
 export type LogFormat = "plain" | "json";
 
@@ -20,12 +23,16 @@ export type LoggerLevelColorOverrides = Partial<LoggerLevelColors>;
 
 export type LoggerLevelLabelOverrides = Partial<LoggerLevelLabels>;
 
+export type { LogWriter } from "@/writers";
+
 export type LoggerOptions = {
   showTime?: boolean;
   format?: LogFormat;
   logLevel?: LogLevel;
   levelColors?: LoggerLevelColorOverrides;
   levelLabels?: LoggerLevelLabelOverrides;
+  writers?: [LogWriter, ...LogWriter[]];
+  metadata?: Record<string, unknown>;
 };
 
 type LoggerTextStyleOptions =
@@ -98,6 +105,7 @@ type JsonLogOutput = {
   message?: string;
   messages?: unknown[];
   data?: unknown;
+  [key: string]: unknown;
 };
 
 export type LoggerLogOptions = (LoggerTextStyleOptions | LoggerTextStyleConflict) &
@@ -129,6 +137,7 @@ export type Logger = {
   warn: (...args: unknown[]) => void;
   error: (...args: unknown[]) => void;
   setLevel: (level: LogLevel) => void;
+  child: (metadata: Record<string, unknown>) => Logger;
 } & typeof styled;
 
 function createSimpleStyled(loggerLog: (s: string) => void, currentStyle: typeof styled = styled) {
@@ -137,12 +146,10 @@ function createSimpleStyled(loggerLog: (s: string) => void, currentStyle: typeof
     loggerLog(currentStyle(text));
   };
 
-  const styleFns = new Set(["rgb", "bgRgb", "hex", "bgHex"]);
-
   return new Proxy(fn as unknown as typeof styled, {
     get(_, prop: string | symbol) {
       if (typeof prop === "string") {
-        if (styleFns.has(prop)) {
+        if (STYLE_FN_NAMES.has(prop)) {
           return (...args: any[]) =>
             createSimpleStyled(loggerLog, (currentStyle as any)[prop](...args));
         }
@@ -301,6 +308,8 @@ export function createLogger(options?: LoggerOptions): Logger {
   const envLevel = rawEnv?.toLowerCase();
   const showTime = options?.showTime === true;
   const format = options?.format ?? "plain";
+  const writers: [LogWriter, ...LogWriter[]] | undefined = options?.writers;
+  const metadata: Record<string, unknown> = options?.metadata ?? {};
   const levelColors: LoggerLevelColors = {
     ...DEFAULT_LEVEL_COLORS,
     ...options?.levelColors,
@@ -321,7 +330,6 @@ export function createLogger(options?: LoggerOptions): Logger {
 
   let currentLevel = resolve(options?.logLevel);
   let min = ALL_LEVEL_WEIGHTS[currentLevel];
-  const isEnabled = (method: MethodLogLevel) => ALL_LEVEL_WEIGHTS[method] >= min;
 
   const formatArg = (value: unknown): string => {
     if (typeof value === "string") return value;
@@ -352,14 +360,26 @@ export function createLogger(options?: LoggerOptions): Logger {
       } else if (args.length === 1) {
         jsonOutput.data = args[0];
       }
+      for (const [key, value] of Object.entries(metadata)) {
+        if (!(key in jsonOutput)) {
+          jsonOutput[key] = value;
+        }
+      }
       return [stringifyJsonLog(jsonOutput)];
     }
 
     const label = levelLabels[method];
     const coloredLabel = styled[levelColors[method]](label);
-    const message = args.map(formatArg).join(" ");
+    let message = "";
+    for (let i = 0; i < args.length; i++) {
+      if (i > 0) message += " ";
+      message += formatArg(args[i]);
+    }
     const prefix = showTime ? `${new Date().toISOString()} ${coloredLabel}` : coloredLabel;
-    const prefixed = message.length > 0 ? `${prefix} ${message}` : prefix;
+    const metaKeys = Object.keys(metadata);
+    const metaSuffix = metaKeys.length > 0 ? ` ${JSON.stringify(metadata)}` : "";
+    const prefixed =
+      message.length > 0 ? `${prefix} ${message}${metaSuffix}` : `${prefix}${metaSuffix}`;
     return [prefixed];
   };
 
@@ -370,16 +390,14 @@ export function createLogger(options?: LoggerOptions): Logger {
   };
 
   // helper log functions that respect configured level
-  const callLog = (method: MethodLogLevel, fn: (...args: unknown[]) => void, args: unknown[]) => {
-    if (!isEnabled(method)) return;
-    if (args.length === 0) {
-      // @ts-ignore - console methods may have slightly different signatures
-      fn();
-      return;
-    }
+  const callLog = (method: MethodLogLevel, args: unknown[]) => {
+    if (!writers) return;
 
-    // @ts-ignore
-    fn(...(args as any[]));
+    for (const writer of writers) {
+      const writerMin = writer.logLevel !== undefined ? ALL_LEVEL_WEIGHTS[writer.logLevel] : min;
+      if (ALL_LEVEL_WEIGHTS[method] < writerMin) continue;
+      writer(method, ...args);
+    }
   };
 
   const base = {
@@ -388,30 +406,42 @@ export function createLogger(options?: LoggerOptions): Logger {
         const optionArgs = args.slice(1);
         if (optionArgs.every((arg) => isLoggerLogOptions(arg))) {
           const styledText = applyLogOptions(args[0], optionArgs);
-          callLog("log", console.log.bind(console), [styledText]);
+          callLog("log", [styledText]);
           return;
         }
       }
 
-      callLog("log", console.log.bind(console), args);
+      callLog("log", args);
     },
     trace(...args: unknown[]) {
-      callLog("trace", console.trace.bind(console), withPrefix("trace", args));
+      callLog("trace", withPrefix("trace", args));
     },
     debug(...args: unknown[]) {
-      callLog("debug", console.debug.bind(console), withPrefix("debug", args));
+      callLog("debug", withPrefix("debug", args));
     },
     info(...args: unknown[]) {
-      callLog("info", console.info.bind(console), withPrefix("info", args));
+      callLog("info", withPrefix("info", args));
     },
     warn(...args: unknown[]) {
-      callLog("warn", console.warn.bind(console), withPrefix("warn", args));
+      callLog("warn", withPrefix("warn", args));
     },
     error(...args: unknown[]) {
-      callLog("error", console.error.bind(console), withPrefix("error", args));
+      callLog("error", withPrefix("error", args));
     },
     setLevel(level?: LogLevel) {
       setLevel(level);
+    },
+    child(childMetadata: Record<string, unknown>) {
+      const childOptions: LoggerOptions = {
+        showTime,
+        format,
+        logLevel: currentLevel,
+        metadata: { ...metadata, ...childMetadata },
+      };
+      if (options?.levelColors !== undefined) childOptions.levelColors = options.levelColors;
+      if (options?.levelLabels !== undefined) childOptions.levelLabels = options.levelLabels;
+      if (writers !== undefined) childOptions.writers = writers;
+      return createLogger(childOptions);
     },
   };
 
@@ -424,19 +454,15 @@ export function createLogger(options?: LoggerOptions): Logger {
       if (typeof prop === "string") {
         if (prop in ANSI_CODES) {
           return createSimpleStyled(
-            (s: string) => callLog("log", console.log.bind(console), [s]),
+            (s: string) => callLog("log", [s]),
             (styled as any)[prop as StyleName],
           );
         }
 
         // rgb/bgRgb/hex/bgHex are functions on `styled` that accept args
-        const styleFns = new Set(["rgb", "bgRgb", "hex", "bgHex"]);
-        if (styleFns.has(prop)) {
+        if (STYLE_FN_NAMES.has(prop)) {
           return (...args: any[]) =>
-            createSimpleStyled(
-              (s: string) => callLog("log", console.log.bind(console), [s]),
-              (styled as any)[prop](...args),
-            );
+            createSimpleStyled((s: string) => callLog("log", [s]), (styled as any)[prop](...args));
         }
       }
 
@@ -445,4 +471,4 @@ export function createLogger(options?: LoggerOptions): Logger {
   }) as Logger;
 }
 
-export const logger = createLogger();
+export const logger = createLogger({ writers: [consoleWriter()] });

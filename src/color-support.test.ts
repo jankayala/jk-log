@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { shouldUseColor, stripAnsi } from "@/color-support";
+import { shouldUseColor, stripAnsi, isBrowser, invalidateColorCache } from "@/color-support";
 import { styled } from "@/styled";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -16,6 +16,8 @@ function withEnv(overrides: Record<string, string | undefined>, fn: () => void) 
     }
   }
 
+  invalidateColorCache();
+
   try {
     fn();
   } finally {
@@ -26,6 +28,7 @@ function withEnv(overrides: Record<string, string | undefined>, fn: () => void) 
         process.env[key] = value;
       }
     }
+    invalidateColorCache();
   }
 }
 
@@ -40,6 +43,7 @@ describe("shouldUseColor", () => {
       writable: true,
       configurable: true,
     });
+    invalidateColorCache();
   });
 
   it("returns false when NO_COLOR is set to a non-empty string", () => {
@@ -71,6 +75,7 @@ describe("shouldUseColor", () => {
       writable: true,
       configurable: true,
     });
+    invalidateColorCache();
     withEnv({ NO_COLOR: undefined, FORCE_COLOR: undefined }, () =>
       expect(shouldUseColor()).toBe(true),
     );
@@ -82,6 +87,7 @@ describe("shouldUseColor", () => {
       writable: true,
       configurable: true,
     });
+    invalidateColorCache();
     withEnv({ NO_COLOR: undefined, FORCE_COLOR: undefined }, () =>
       expect(shouldUseColor()).toBe(false),
     );
@@ -93,6 +99,7 @@ describe("shouldUseColor", () => {
       writable: true,
       configurable: true,
     });
+    invalidateColorCache();
     withEnv({ NO_COLOR: undefined, FORCE_COLOR: undefined }, () =>
       expect(shouldUseColor()).toBe(false),
     );
@@ -105,6 +112,7 @@ describe("shouldUseColor", () => {
       writable: true,
       configurable: true,
     });
+    invalidateColorCache();
 
     try {
       withEnv({ NO_COLOR: undefined, FORCE_COLOR: undefined }, () =>
@@ -116,6 +124,7 @@ describe("shouldUseColor", () => {
         writable: true,
         configurable: true,
       });
+      invalidateColorCache();
     }
   });
 
@@ -128,6 +137,7 @@ describe("shouldUseColor", () => {
         writable: true,
         configurable: true,
       });
+      invalidateColorCache();
       expect(shouldUseColor()).toBe(false);
     });
   });
@@ -172,6 +182,7 @@ describe("styled – color policy integration", () => {
       writable: true,
       configurable: true,
     });
+    invalidateColorCache();
   });
 
   afterEach(() => {
@@ -182,10 +193,12 @@ describe("styled – color policy integration", () => {
     });
     delete process.env["NO_COLOR"];
     delete process.env["FORCE_COLOR"];
+    invalidateColorCache();
   });
 
   it("strips ANSI codes when NO_COLOR=1", () => {
     process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
     expect(styled.red("Hello")).toBe("Hello");
   });
 
@@ -195,6 +208,7 @@ describe("styled – color policy integration", () => {
 
   it("applies ANSI codes when FORCE_COLOR=1 in non-TTY", () => {
     process.env["FORCE_COLOR"] = "1";
+    invalidateColorCache();
     expect(styled.red("Hello")).toBe("\x1b[31mHello\x1b[39m");
   });
 
@@ -204,16 +218,80 @@ describe("styled – color policy integration", () => {
       writable: true,
       configurable: true,
     });
+    invalidateColorCache();
     expect(styled.red("Hello")).toBe("\x1b[31mHello\x1b[39m");
   });
 
   it("rgb returns plain text when colors disabled", () => {
     process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
     expect(styled.rgb(50, 100, 150)("Hi")).toBe("Hi");
   });
 
   it("bgHex returns plain text when colors disabled", () => {
     process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
     expect(styled.bgHex("#102030")("Hi")).toBe("Hi");
+  });
+});
+
+// ─── isBrowser ────────────────────────────────────────────────────────────────
+
+describe("isBrowser", () => {
+  it("returns false in Node.js environment", () => {
+    expect(isBrowser()).toBe(false);
+  });
+
+  it("returns true when window and document exist and process.versions.node is absent", () => {
+    const originalVersions = process.versions;
+    (globalThis as any).window = {};
+    (globalThis as any).document = {};
+    Object.defineProperty(process, "versions", {
+      value: {},
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      expect(isBrowser()).toBe(true);
+    } finally {
+      delete (globalThis as any).window;
+      delete (globalThis as any).document;
+      Object.defineProperty(process, "versions", {
+        value: originalVersions,
+        writable: true,
+        configurable: true,
+      });
+    }
+  });
+});
+
+// ─── invalidateColorCache ─────────────────────────────────────────────────────
+
+describe("invalidateColorCache", () => {
+  const originalIsTTY = process.stdout.isTTY;
+
+  afterEach(() => {
+    Object.defineProperty(process.stdout, "isTTY", {
+      value: originalIsTTY,
+      writable: true,
+      configurable: true,
+    });
+    delete process.env["NO_COLOR"];
+    delete process.env["FORCE_COLOR"];
+    invalidateColorCache();
+  });
+
+  it("causes shouldUseColor to re-evaluate after env change", () => {
+    process.env["FORCE_COLOR"] = "1";
+    delete process.env["NO_COLOR"];
+    invalidateColorCache();
+    expect(shouldUseColor()).toBe(true);
+
+    delete process.env["FORCE_COLOR"];
+    process.env["NO_COLOR"] = "1";
+    // Without invalidation, result would still be cached as true
+    invalidateColorCache();
+    expect(shouldUseColor()).toBe(false);
   });
 });

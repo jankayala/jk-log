@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-08
+
+### Added
+
+- **Writers system** — pluggable log output handlers via a new `writers` option on `createLogger()`:
+  - `consoleWriter(options?)` — routes log calls to matching `console.*` methods with optional `methodMapping` to remap levels.
+  - `fileWriter(options)` — appends log lines to a file with internal buffering (`bufferSize`, `stripAnsi`, `overwrite` options). Includes `destroy()` for cleanup.
+  - `httpWriter(options)` — sends log entries as JSON-RPC 2.0 requests over HTTP/HTTPS with batching, keep-alive, and configurable flush intervals.
+  - `LogWriter` / `LogWriterFn` types with per-writer `logLevel` override and optional `destroy()` method.
+- `logger.child(metadata)` — create child loggers that inherit parent options and merge additional metadata.
+- `metadata` option on `createLogger()` — attach key-value pairs included in every log entry.
+- `invalidateColorCache()` — reset the cached result of `shouldUseColor()` after changing environment variables.
+- `isBrowser()` utility — detect browser-like environments (vs Node.js).
+- `MethodLogLevel` type is now exported.
+- Writers barrel export (`src/writers/index.ts`) re-exported from the package entry point.
+- Comprehensive tests for all writers, child loggers, and color-support caching.
+
+### Changed
+
+- `shouldUseColor()` now caches its result for performance; use `invalidateColorCache()` to reset.
+- `stripAnsi` regex upgraded to a more comprehensive pattern matching SGR, OSC, CSI, and other ANSI escape sequences.
+- Default `logger` instance now explicitly uses `[consoleWriter()]` as its writer.
+- Hoisted `styleFns` set and other hot-path allocations to module scope for reduced overhead.
+- `styled` chain internals optimized to reduce intermediate array allocations.
+
+### Fixed
+
+- `logger.log()` now correctly checks the global `isEnabled("log")` gate, consistent with other log methods.
+- `fileWriter` properly exposes `destroy()` to close file descriptors and flush pending data.
+- `fileWriter` flush timer is now `unref()`'d to prevent blocking Node.js process exit.
+- `httpWriter` handles non-serializable / circular-reference arguments safely.
+- `httpWriter` flush race condition resolved with in-flight request tracking.
+
 ## [v1.0.2] - 2026-05-05
 
 ### Added

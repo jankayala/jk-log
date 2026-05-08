@@ -288,12 +288,25 @@ function analyzeStyles(styles: AppliedStyle[]): StyleAnalysis {
   return { textStyles: foregrounds, backgroundStyles: backgroundStyles };
 }
 
+function createStyledWith(existing: AppliedStyle[], newStyle: AppliedStyle): Styled {
+  const next = new Array<AppliedStyle>(existing.length + 1);
+  for (let i = 0; i < existing.length; i++) {
+    next[i] = existing[i]!;
+  }
+  next[existing.length] = newStyle;
+  return createStyled(next);
+}
+
 function createStyled(
   styles: AppliedStyle[] = [],
   analysis: StyleAnalysis = analyzeStyles(styles),
 ): Styled {
   const fn = ((text: string) => {
-    return styles.reduce((acc, style) => applyStyle(acc, style), text);
+    let result = text;
+    for (let i = 0; i < styles.length; i++) {
+      result = applyStyle(result, styles[i]!);
+    }
+    return result;
   }) as Styled;
 
   return new Proxy(fn, {
@@ -313,7 +326,7 @@ function createStyled(
             );
           }
 
-          return createStyled([...styles, newStyle]);
+          return createStyledWith(styles, newStyle);
         };
       }
 
@@ -328,7 +341,7 @@ function createStyled(
             );
           }
 
-          return createStyled([...styles, newStyle]);
+          return createStyledWith(styles, newStyle);
         };
       }
 
@@ -343,7 +356,7 @@ function createStyled(
             );
           }
 
-          return createStyled([...styles, newStyle]);
+          return createStyledWith(styles, newStyle);
         };
       }
 
@@ -358,7 +371,7 @@ function createStyled(
             );
           }
 
-          return createStyled([...styles, newStyle]);
+          return createStyledWith(styles, newStyle);
         };
       }
 
@@ -380,7 +393,7 @@ function createStyled(
           );
         }
 
-        return createStyled([...styles, newStyle]);
+        return createStyledWith(styles, newStyle);
       }
 
       throw new Error(`Unknown style: ${String(prop)}`);

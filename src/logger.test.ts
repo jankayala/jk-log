@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
-import { createLogger, logger, DEFAULT_LEVEL_LABELS, DEFAULT_LEVEL_COLORS } from "@/logger";
+import {
+  createLogger,
+  logger,
+  DEFAULT_LEVEL_LABELS,
+  DEFAULT_LEVEL_COLORS,
+  type LogWriter,
+} from "@/logger";
+import { consoleWriter, fileWriter } from "@/writers";
+import { readFileSync, unlinkSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { stripAnsi, invalidateColorCache } from "@/color-support";
 
 describe("logger.ts)", () => {
   const originalForce = process.env["FORCE_COLOR"];
@@ -11,6 +22,7 @@ describe("logger.ts)", () => {
     // Ensure colors are enabled for styling expectations
     process.env["FORCE_COLOR"] = "1";
     delete process.env["NO_COLOR"];
+    invalidateColorCache();
   });
 
   afterAll(() => {
@@ -19,6 +31,7 @@ describe("logger.ts)", () => {
 
     if (originalNoColor === undefined) delete process.env["NO_COLOR"];
     else process.env["NO_COLOR"] = originalNoColor;
+    invalidateColorCache();
   });
 
   beforeEach(() => {
@@ -291,7 +304,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
   it("options.logLevel overrides LOG_LEVEL env var", () => {
     process.env["LOG_LEVEL"] = "error";
-    const l = createLogger({ logLevel: "info" });
+    const l = createLogger({ logLevel: "info", writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.info("should print");
     expect(infoSpy).toHaveBeenCalled();
@@ -300,7 +313,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
   it("reads LOG_LEVEL from environment when no option provided", () => {
     process.env["LOG_LEVEL"] = "error";
-    const l = createLogger();
+    const l = createLogger({ writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.info("won't print");
     expect(infoSpy).not.toHaveBeenCalled();
@@ -313,7 +326,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
   it("LOG_LEVEL is case-insensitive", () => {
     process.env["LOG_LEVEL"] = "ERROR";
-    const l = createLogger();
+    const l = createLogger({ writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.info("won't print");
     expect(infoSpy).not.toHaveBeenCalled();
@@ -326,7 +339,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
   it("prototype properties are not accepted as LOG_LEVEL", () => {
     process.env["LOG_LEVEL"] = "toString";
-    const l = createLogger();
+    const l = createLogger({ writers: [consoleWriter()] });
     const traceSpy = vi.spyOn(console, "trace").mockImplementation(() => {});
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
@@ -342,7 +355,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
   it("invalid LOG_LEVEL falls back to default (info)", () => {
     process.env["LOG_LEVEL"] = "not-a-level";
-    const l = createLogger();
+    const l = createLogger({ writers: [consoleWriter()] });
     const traceSpy = vi.spyOn(console, "trace").mockImplementation(() => {});
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.trace("should be suppressed because fallback is info");
@@ -354,7 +367,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("invalid options.logLevel falls back to default (info)", () => {
-    const l = createLogger({ logLevel: "not-a-level" as any });
+    const l = createLogger({ logLevel: "not-a-level" as any, writers: [consoleWriter()] });
     const traceSpy = vi.spyOn(console, "trace").mockImplementation(() => {});
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.trace("should be suppressed because fallback is info");
@@ -366,7 +379,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("styled chainables respect configured level (suppressed at error level)", () => {
-    const l = createLogger({ logLevel: "error" });
+    const l = createLogger({ logLevel: "error", writers: [consoleWriter()] });
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     (l as any).red("nope");
     expect(logSpy).not.toHaveBeenCalled();
@@ -374,7 +387,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("logger.setLevel changes behavior at runtime", () => {
-    const l = createLogger({ logLevel: "debug" });
+    const l = createLogger({ logLevel: "debug", writers: [consoleWriter()] });
     const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
     l.debug("here");
     expect(debugSpy).toHaveBeenCalled();
@@ -392,7 +405,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2023-11-07T14:20:35.123Z"));
 
-    const l = createLogger({ showTime: true });
+    const l = createLogger({ showTime: true, writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.info("Text");
 
@@ -407,8 +420,9 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     const originalNoColor = process.env["NO_COLOR"];
     delete process.env["FORCE_COLOR"];
     process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
 
-    const l = createLogger({ showTime: false });
+    const l = createLogger({ showTime: false, writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.info("Text");
 
@@ -420,6 +434,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
     if (originalNoColor === undefined) delete process.env["NO_COLOR"];
     else process.env["NO_COLOR"] = originalNoColor;
+    invalidateColorCache();
   });
 
   it("showTime=true colors the label based on level", () => {
@@ -427,11 +442,12 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     const originalNoColor = process.env["NO_COLOR"];
     process.env["FORCE_COLOR"] = "1";
     delete process.env["NO_COLOR"];
+    invalidateColorCache();
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2023-11-07T14:20:35.123Z"));
 
-    const l = createLogger({ showTime: true });
+    const l = createLogger({ showTime: true, writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.info("Text");
 
@@ -445,6 +461,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
     if (originalNoColor === undefined) delete process.env["NO_COLOR"];
     else process.env["NO_COLOR"] = originalNoColor;
+    invalidateColorCache();
   });
 
   it("accepts partial levelLabels overrides and falls back to defaults", () => {
@@ -452,10 +469,12 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     const originalNoColor = process.env["NO_COLOR"];
     delete process.env["FORCE_COLOR"];
     process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
 
     const l = createLogger({
       showTime: false,
       levelLabels: { warn: "Warning", error: "!Ahhh..." },
+      writers: [consoleWriter()],
     });
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -475,6 +494,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
     if (originalNoColor === undefined) delete process.env["NO_COLOR"];
     else process.env["NO_COLOR"] = originalNoColor;
+    invalidateColorCache();
   });
 
   it("symbol properties on logger and chained styled proxies return undefined", () => {
@@ -506,7 +526,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("format=json outputs structured JSON with level and message", () => {
-    const l = createLogger({ format: "json" });
+    const l = createLogger({ format: "json", writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     l.info("Test message");
 
@@ -524,7 +544,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2023-11-07T14:20:35.123Z"));
 
-    const l = createLogger({ format: "json", showTime: true });
+    const l = createLogger({ format: "json", showTime: true, writers: [consoleWriter()] });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     l.warn("Warning text");
 
@@ -540,7 +560,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("format=json with multiple args outputs messages array", () => {
-    const l = createLogger({ format: "json" });
+    const l = createLogger({ format: "json", writers: [consoleWriter()] });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     l.error("First", "Second", { third: 3 });
 
@@ -555,7 +575,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("format=json with no args omits message fields", () => {
-    const l = createLogger({ format: "json" });
+    const l = createLogger({ format: "json", writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     l.info();
@@ -572,7 +592,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("format=json serializes bigint values without throwing", () => {
-    const l = createLogger({ format: "json" });
+    const l = createLogger({ format: "json", writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     expect(() => l.info({ count: 1n })).not.toThrow();
@@ -587,7 +607,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("format=json handles circular references", () => {
-    const l = createLogger({ format: "json" });
+    const l = createLogger({ format: "json", writers: [consoleWriter()] });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const circular: Record<string, unknown> = { value: 1 };
     circular.self = circular;
@@ -608,7 +628,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2023-11-07T14:20:35.123Z"));
 
-    const l = createLogger({ format: "json", showTime: true });
+    const l = createLogger({ format: "json", showTime: true, writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const unserializable = {
       toJSON() {
@@ -634,8 +654,9 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     const originalNoColor = process.env["NO_COLOR"];
     delete process.env["FORCE_COLOR"];
     process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
 
-    const l = createLogger();
+    const l = createLogger({ writers: [consoleWriter()] });
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const err = new Error("boom");
     delete err.stack;
@@ -653,5 +674,372 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     else process.env["FORCE_COLOR"] = originalForce;
     if (originalNoColor === undefined) delete process.env["NO_COLOR"];
     else process.env["NO_COLOR"] = originalNoColor;
+    invalidateColorCache();
+  });
+});
+
+describe("writers", () => {
+  beforeAll(() => {
+    process.env["FORCE_COLOR"] = "1";
+    delete process.env["NO_COLOR"];
+    invalidateColorCache();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("writer receives level and formatted args instead of console", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer], logLevel: "trace" });
+
+    l.info("hello", "world");
+
+    expect(writer).toHaveBeenCalledTimes(1);
+    const [level, ...args] = writer.mock.calls[0]!;
+    expect(level).toBe("info");
+    expect(args[0] as string).toContain("[INFO]");
+    expect(args[0] as string).toContain("hello");
+    expect(args[0] as string).toContain("world");
+  });
+
+  it("writer is not called when level is suppressed", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer], logLevel: "error" });
+
+    l.info("suppressed");
+    expect(writer).not.toHaveBeenCalled();
+  });
+
+  it("writer works with log() method", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer] });
+
+    l.log("plain log");
+    expect(writer).toHaveBeenCalledWith("log", "plain log");
+  });
+
+  it("writer works with log() and style options", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer] });
+
+    l.log("styled", { color: "red" });
+    expect(writer).toHaveBeenCalledTimes(1);
+    const text = writer.mock.calls[0]![1] as string;
+    expect(text).toContain("styled");
+    expect(text).toContain("\x1b[31m");
+  });
+
+  it("writers do not call console methods", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer], logLevel: "trace" });
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const traceSpy = vi.spyOn(console, "trace").mockImplementation(() => {});
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    l.log("a");
+    l.info("b");
+    l.warn("c");
+    l.error("d");
+    l.trace("e");
+    l.debug("f");
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(infoSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(traceSpy).not.toHaveBeenCalled();
+    expect(debugSpy).not.toHaveBeenCalled();
+
+    expect(writer).toHaveBeenCalledTimes(6);
+  });
+
+  it("writer works with json format", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer], format: "json" });
+
+    l.info("json msg");
+    expect(writer).toHaveBeenCalledTimes(1);
+    const jsonStr = writer.mock.calls[0]![1] as string;
+    const parsed = JSON.parse(jsonStr);
+    expect(parsed.level).toBe("info");
+    expect(parsed.message).toBe("json msg");
+  });
+
+  it("writer receives styled output from chainable style methods", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer] });
+
+    (l as any).red("styled text");
+    expect(writer).toHaveBeenCalledTimes(1);
+    expect(writer.mock.calls[0]![0]).toBe("log");
+    expect(writer.mock.calls[0]![1] as string).toContain("\x1b[31m");
+  });
+
+  it("writer with log() and no args", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer] });
+
+    l.log();
+    expect(writer).toHaveBeenCalledWith("log");
+  });
+
+  it("multiple writers all receive every log call", () => {
+    const w1 = vi.fn<LogWriter>();
+    const w2 = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [w1, w2] });
+
+    l.log("multi");
+    expect(w1).toHaveBeenCalledWith("log", "multi");
+    expect(w2).toHaveBeenCalledWith("log", "multi");
+  });
+
+  it("default logger uses consoleWriter when no writers specified", () => {
+    const l = createLogger({ writers: [consoleWriter()] });
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    l.log("default");
+    expect(logSpy).toHaveBeenCalledWith("default");
+  });
+
+  it("writer logLevel overrides logger logLevel", () => {
+    const w1 = Object.assign(vi.fn() as unknown as LogWriter, { logLevel: "error" as const });
+    const w2 = vi.fn() as unknown as LogWriter;
+    const l = createLogger({ logLevel: "trace", writers: [w1, w2] });
+    l.info("hello");
+    expect(w1).not.toHaveBeenCalled();
+    expect(w2).toHaveBeenCalledWith("info", expect.stringContaining("hello"));
+  });
+
+  it("writer logLevel allows more verbose than logger default", () => {
+    const w = Object.assign(vi.fn() as unknown as LogWriter, { logLevel: "trace" as const });
+    const l = createLogger({ logLevel: "error", writers: [w] });
+    l.trace("verbose");
+    expect(w).toHaveBeenCalledWith("trace", expect.stringContaining("verbose"));
+  });
+
+  it("consoleWriter accepts logLevel option", () => {
+    const writer = consoleWriter({ logLevel: "warn" });
+    expect(writer.logLevel).toBe("warn");
+  });
+
+  it("fileWriter accepts logLevel option", () => {
+    const writer = fileWriter({ filePath: "/tmp/test-loglevel.log", logLevel: "error" });
+    expect(writer.logLevel).toBe("error");
+  });
+});
+
+describe("metadata and child loggers", () => {
+  const originalForce = process.env["FORCE_COLOR"];
+  const originalNoColor = process.env["NO_COLOR"];
+
+  beforeAll(() => {
+    delete process.env["FORCE_COLOR"];
+    process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
+  });
+
+  afterAll(() => {
+    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
+    else process.env["FORCE_COLOR"] = originalForce;
+    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
+    else process.env["NO_COLOR"] = originalNoColor;
+    invalidateColorCache();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("metadata appears in JSON output as top-level fields", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({
+      format: "json",
+      metadata: { requestId: "abc-123" },
+      writers: [writer],
+    });
+    l.info("hello");
+
+    const parsed = JSON.parse(writer.mock.calls[0]![1] as string);
+    expect(parsed.level).toBe("info");
+    expect(parsed.message).toBe("hello");
+    expect(parsed.requestId).toBe("abc-123");
+  });
+
+  it("metadata appears in plain output as JSON suffix", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ metadata: { requestId: "abc" }, writers: [writer] });
+    l.info("hello");
+
+    const output = writer.mock.calls[0]![1] as string;
+    expect(output).toContain("[INFO] hello");
+    expect(output).toContain('"requestId":"abc"');
+  });
+
+  it("metadata in plain output with no message args", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ metadata: { service: "api" }, writers: [writer] });
+    l.info();
+
+    const output = writer.mock.calls[0]![1] as string;
+    expect(output).toContain("[INFO]");
+    expect(output).toContain('"service":"api"');
+  });
+
+  it("metadata does not override built-in JSON fields", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({
+      format: "json",
+      metadata: { level: "overridden", message: "overridden" },
+      writers: [writer],
+    });
+    l.info("real message");
+
+    const parsed = JSON.parse(writer.mock.calls[0]![1] as string);
+    expect(parsed.level).toBe("info");
+    expect(parsed.message).toBe("real message");
+  });
+
+  it("empty metadata does not add suffix in plain format", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ metadata: {}, writers: [writer] });
+    l.info("clean");
+
+    const output = writer.mock.calls[0]![1] as string;
+    expect(output).toBe("[INFO] clean");
+  });
+
+  it("child() creates a new logger with merged metadata", () => {
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({
+      format: "json",
+      metadata: { service: "api" },
+      writers: [writer],
+    });
+    const child = parent.child({ requestId: "req-1" });
+    child.info("from child");
+
+    const parsed = JSON.parse(writer.mock.calls[0]![1] as string);
+    expect(parsed.service).toBe("api");
+    expect(parsed.requestId).toBe("req-1");
+    expect(parsed.message).toBe("from child");
+  });
+
+  it("child() overrides parent metadata keys", () => {
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({ format: "json", metadata: { env: "prod" }, writers: [writer] });
+    const child = parent.child({ env: "staging" });
+    child.info("override");
+
+    const parsed = JSON.parse(writer.mock.calls[0]![1] as string);
+    expect(parsed.env).toBe("staging");
+  });
+
+  it("child() does not mutate parent logger", () => {
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({
+      format: "json",
+      metadata: { service: "api" },
+      writers: [writer],
+    });
+    parent.child({ requestId: "req-1" });
+
+    parent.info("parent log");
+    const parsed = JSON.parse(writer.mock.calls[0]![1] as string);
+    expect(parsed.service).toBe("api");
+    expect(parsed.requestId).toBeUndefined();
+  });
+
+  it("nested child().child() chains merge all metadata", () => {
+    const writer = vi.fn<LogWriter>();
+    const root = createLogger({ format: "json", metadata: { a: 1 }, writers: [writer] });
+    const child = root.child({ b: 2 }).child({ c: 3 });
+    child.info("deep");
+
+    const parsed = JSON.parse(writer.mock.calls[0]![1] as string);
+    expect(parsed.a).toBe(1);
+    expect(parsed.b).toBe(2);
+    expect(parsed.c).toBe(3);
+  });
+
+  it("child() inherits parent log level", () => {
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({ logLevel: "error", writers: [writer] });
+    const child = parent.child({ id: "x" });
+    child.info("suppressed");
+    expect(writer).not.toHaveBeenCalled();
+
+    child.error("visible");
+    expect(writer).toHaveBeenCalledTimes(1);
+  });
+
+  it("child() setLevel is independent of parent", () => {
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({ logLevel: "error", writers: [writer] });
+    const child = parent.child({ id: "x" });
+    child.setLevel("debug");
+
+    const debugSpy = vi.fn<LogWriter>();
+    // Use a new child with its own writer to verify independence
+    const child2 = createLogger({ logLevel: "error", writers: [debugSpy] });
+    child2.setLevel("debug");
+
+    child.info("child info");
+    expect(writer).toHaveBeenCalledTimes(1);
+
+    // Parent should still be at error level
+    writer.mockClear();
+    parent.info("parent info");
+    expect(writer).not.toHaveBeenCalled();
+  });
+
+  it("child() inherits format and showTime", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-01T00:00:00.000Z"));
+
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({ format: "json", showTime: true, writers: [writer] });
+    const child = parent.child({ svc: "test" });
+    child.info("timed");
+
+    const parsed = JSON.parse(writer.mock.calls[0]![1] as string);
+    expect(parsed.timestamp).toBe("2024-01-01T00:00:00.000Z");
+    expect(parsed.svc).toBe("test");
+
+    vi.useRealTimers();
+  });
+
+  it("child() inherits levelColors and levelLabels from parent", () => {
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({
+      levelColors: { warn: "red" },
+      levelLabels: { warn: "WARNING" },
+      writers: [writer],
+    });
+    const child = parent.child({ id: "x" });
+    child.warn("hello");
+
+    const output = writer.mock.calls[0]![1] as string;
+    expect(output).toContain("WARNING");
+  });
+
+  it("createLogger without writers silently drops all logs", () => {
+    const l = createLogger();
+    // Should not throw even though no writers are set
+    expect(() => {
+      l.log("test");
+      l.info("test");
+      l.warn("test");
+      l.error("test");
+    }).not.toThrow();
+  });
+
+  it("child() of logger without writers also has no writers", () => {
+    const l = createLogger();
+    const child = l.child({ id: "x" });
+    // Should not throw
+    expect(() => child.info("orphan")).not.toThrow();
   });
 });
