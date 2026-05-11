@@ -34,6 +34,28 @@ export type HttpWriterOptions = {
   maxBufferSize?: number;
 };
 
+/**
+ * Creates a {@link LogWriter} that sends log entries as JSON-RPC 2.0 requests over HTTP or HTTPS.
+ *
+ * Supports batching, keep-alive connections, configurable flush intervals, and back-pressure
+ * handling via a max buffer size. ANSI sequences are stripped by default.
+ *
+ * Call `writer.destroy()` to flush pending entries and destroy the HTTP agent.
+ *
+ * @param options - Configuration for URL, batching, timeouts, headers, and log level.
+ * @returns A {@link LogWriter} that sends log data over HTTP.
+ * @throws If the URL uses an unsupported protocol or the method name is invalid.
+ *
+ * @example
+ * ```ts
+ * const writer = httpWriter({
+ *   url: "https://logs.example.com/rpc",
+ *   batchSize: 10,
+ *   flushInterval: 3000,
+ * });
+ * const log = createLogger({ writers: [writer] });
+ * ```
+ */
 export function httpWriter(options: HttpWriterOptions): LogWriter {
   const { url } = options;
 

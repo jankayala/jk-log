@@ -401,4 +401,21 @@ function createStyled(
   });
 }
 
+/**
+ * Chainable ANSI string styling engine.
+ *
+ * Supports named colors (`red`, `blue`, …), background colors (`bgRed`, …),
+ * modifiers (`bold`, `italic`, …), and custom colors via `rgb()`, `hex()`,
+ * `bgRgb()`, and `bgHex()`. Enforces a single foreground and single background
+ * color per chain at both the type level and runtime.
+ *
+ * When colors are disabled (e.g., `NO_COLOR` is set), returns plain unformatted text.
+ *
+ * @example
+ * ```ts
+ * styled.red.bold("Error!");          // bold red text
+ * styled.hex("#ff8800")("Warning");   // custom hex color
+ * styled.bgBlue.white("Highlight");   // white text on blue background
+ * ```
+ */
 export const styled = createStyled() as StyledChain<false, false>;

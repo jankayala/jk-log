@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`logger.isLevelEnabled(level)`** — cheap boolean check so callers can skip expensive string formatting when a level is suppressed. Checks all configured writers (including per-writer `logLevel` overrides).
+- **Pretty-printing objects in plain format** — objects and arrays are now formatted with `util.inspect` instead of `JSON.stringify`, producing readable multi-line output with colors, circular-reference handling, and depth limiting. JSON format output is unchanged.
+- **JSDoc comments on all public functions** — `createLogger`, `styled`, `consoleWriter`, `fileWriter`, `httpWriter`, and the default `logger` instance now have JSDoc descriptions visible in IDE tooltips.
 - **Log rotation for `fileWriter`** — two new rotation strategies that can be used independently or combined:
   - `maxFileSize` — rotate when the file exceeds a byte threshold (size-based rotation).
   - `rotationInterval` — rotate after a time interval in milliseconds (time-based rotation).
@@ -16,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rotated files use an index inserted before the file extension (`app.1.log`) or appended for extensionless paths (`app.1`).
 - A background timer automatically triggers time-based rotation even when no log calls occur; the timer is `unref()`'d to avoid blocking process exit.
 - Full test coverage (100% statements, branches, functions, and lines) for all rotation paths.
+
+### Changed
+
+- Plain format `formatArg` now uses `util.inspect` for objects/arrays instead of `JSON.stringify`, producing more readable output with color support and circular-reference handling.
 
 ## [2.0.0] - 2026-05-08
 

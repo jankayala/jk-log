@@ -10,6 +10,18 @@ export type ConsoleWriterOptions = {
   logLevel?: LogLevel;
 };
 
+/**
+ * Creates a {@link LogWriter} that routes log entries to the matching `console.*` methods.
+ *
+ * @param options - Optional configuration for method mapping and log level override.
+ * @returns A {@link LogWriter} that outputs to the console.
+ *
+ * @example
+ * ```ts
+ * const writer = consoleWriter({ logLevel: "warn" });
+ * const log = createLogger({ writers: [writer] });
+ * ```
+ */
 export function consoleWriter(options?: ConsoleWriterOptions): LogWriter {
   const mapping = options?.methodMapping;
 

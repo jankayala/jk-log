@@ -44,6 +44,24 @@ export type FileWriterOptions = {
   rotationInterval?: number;
 };
 
+/**
+ * Creates a {@link LogWriter} that appends log entries to a file with internal buffering.
+ *
+ * Supports ANSI stripping, configurable buffer size, and automatic log file rotation
+ * based on file size or time interval. Only available in Node.js environments.
+ *
+ * Call `writer.destroy()` to flush pending entries, close the file descriptor, and release resources.
+ *
+ * @param options - Configuration for file path, buffering, rotation, and log level.
+ * @returns A {@link LogWriter} that writes to the specified file.
+ * @throws If called outside a Node.js environment.
+ *
+ * @example
+ * ```ts
+ * const writer = fileWriter({ filePath: "./app.log", bufferSize: 4096 });
+ * const log = createLogger({ writers: [writer] });
+ * ```
+ */
 export function fileWriter(options: FileWriterOptions): LogWriter {
   if (typeof process === "undefined" || typeof process.versions?.node !== "string") {
     throw new Error(
@@ -144,6 +162,7 @@ export function fileWriter(options: FileWriterOptions): LogWriter {
       flush();
       // flush() will call rotate() if the interval has elapsed and there was data.
       // If flush had no data, we still need to rotate the (possibly non-empty) file.
+      /* c8 ignore next -- false branch only reachable if flush() already rotated (race with scheduleFlush) */
       if (Date.now() - fileOpenedAt >= rotationInterval) {
         try {
           const stat = statSync(filePath);

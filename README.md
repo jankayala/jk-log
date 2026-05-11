@@ -58,6 +58,16 @@ logger.debug("Now this prints");
 LOG_LEVEL=debug node app.js
 ```
 
+### Check if a level is enabled
+
+Use `isLevelEnabled()` to skip expensive string formatting when a level is suppressed:
+
+```ts
+if (logger.isLevelEnabled("debug")) {
+  logger.debug("Payload:", JSON.stringify(hugeObject));
+}
+```
+
 ## Custom loggers with `createLogger`
 
 ```ts
@@ -209,16 +219,27 @@ log.info("Sent via HTTP");
 
 ## API overview
 
-| Export                    | Description                                                                                                                             |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `logger`                  | Default logger instance (log level `info`). Proxy with all style methods, `log`, `info`, `warn`, `error`, `debug`, `trace`, `setLevel`. |
-| `styled`                  | Callable ANSI string builder. Supports chaining: colors, backgrounds, modifiers, `rgb`/`hex`/`bgRgb`/`bgHex`.                           |
-| `createLogger(options?)`  | Creates a custom logger. Options: `showTime`, `format`, `logLevel`, `levelColors`, `levelLabels`, `metadata`, `writers`.                |
-| `consoleWriter(options?)` | Creates a console output writer.                                                                                                        |
-| `fileWriter(options)`     | Creates a buffered file output writer.                                                                                                  |
-| `httpWriter(options)`     | Creates an HTTP JSON-RPC output writer.                                                                                                 |
-| `shouldUseColor()`        | Returns `boolean` — whether color output is enabled.                                                                                    |
-| `stripAnsi(text)`         | Removes ANSI escape sequences from a string.                                                                                            |
+| Export                    | Description                                                                                                                                               |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `logger`                  | Default logger instance (log level `info`). Proxy with all style methods, `log`, `info`, `warn`, `error`, `debug`, `trace`, `setLevel`, `isLevelEnabled`. |
+| `styled`                  | Callable ANSI string builder. Supports chaining: colors, backgrounds, modifiers, `rgb`/`hex`/`bgRgb`/`bgHex`.                                             |
+| `createLogger(options?)`  | Creates a custom logger. Options: `showTime`, `format`, `logLevel`, `levelColors`, `levelLabels`, `metadata`, `writers`.                                  |
+| `consoleWriter(options?)` | Creates a console output writer.                                                                                                                          |
+| `fileWriter(options)`     | Creates a buffered file output writer with optional log rotation.                                                                                         |
+| `httpWriter(options)`     | Creates an HTTP JSON-RPC output writer.                                                                                                                   |
+| `shouldUseColor()`        | Returns `boolean` — whether color output is enabled.                                                                                                      |
+| `stripAnsi(text)`         | Removes ANSI escape sequences from a string.                                                                                                              |
+
+## Pretty-printing
+
+In plain format, objects and arrays are formatted with `util.inspect` for readable output with colors, depth limiting, and circular-reference safety:
+
+```ts
+logger.info({ user: "Alice", roles: ["admin", "editor"] });
+// [INFO] { user: 'Alice', roles: [ 'admin', 'editor' ] }
+```
+
+JSON format (`format: "json"`) is not affected — it continues to produce single-line JSON.
 
 ## Color policy
 
@@ -228,7 +249,7 @@ log.info("Sent via HTTP");
 
 ## Examples
 
-See [`./examples/basic.ts`](https://github.com/jankayala/jk-log/blob/main/examples/basic.ts) and [`./examples/createLogger.ts`](https://github.com/jankayala/jk-log/blob/main/examples/createLogger.ts).
+See the [`./examples/`](https://github.com/jankayala/jk-log/tree/main/examples) directory for runnable scripts covering basic logging, styled output, JSON format, writers, child loggers, and more.
 
 ## License
 

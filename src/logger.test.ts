@@ -667,7 +667,12 @@ describe("createLogger and LOG_LEVEL behavior", () => {
 
     expect(infoSpy).toHaveBeenCalledTimes(1);
     const output = infoSpy.mock.calls[0]![0] as string;
-    expect(output).toContain("[INFO] boom null undefined [object Object]");
+    expect(output).toContain("[INFO]");
+    expect(output).toContain("boom");
+    expect(output).toContain("null");
+    expect(output).toContain("undefined");
+    // util.inspect handles circular references with [Circular *1]
+    expect(output).toContain("[Circular");
 
     infoSpy.mockRestore();
     if (originalForce === undefined) delete process.env["FORCE_COLOR"];
@@ -1041,5 +1046,136 @@ describe("metadata and child loggers", () => {
     const child = l.child({ id: "x" });
     // Should not throw
     expect(() => child.info("orphan")).not.toThrow();
+  });
+});
+
+describe("isLevelEnabled", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns true for levels at or above the configured level", () => {
+    const l = createLogger({ logLevel: "info", writers: [consoleWriter()] });
+    expect(l.isLevelEnabled("info")).toBe(true);
+    expect(l.isLevelEnabled("warn")).toBe(true);
+    expect(l.isLevelEnabled("error")).toBe(true);
+    expect(l.isLevelEnabled("log")).toBe(true);
+  });
+
+  it("returns false for levels below the configured level", () => {
+    const l = createLogger({ logLevel: "info", writers: [consoleWriter()] });
+    expect(l.isLevelEnabled("debug")).toBe(false);
+    expect(l.isLevelEnabled("trace")).toBe(false);
+  });
+
+  it("reflects runtime setLevel changes", () => {
+    const l = createLogger({ logLevel: "error", writers: [consoleWriter()] });
+    expect(l.isLevelEnabled("info")).toBe(false);
+    l.setLevel("debug");
+    expect(l.isLevelEnabled("info")).toBe(true);
+    expect(l.isLevelEnabled("debug")).toBe(true);
+    expect(l.isLevelEnabled("trace")).toBe(false);
+  });
+
+  it("returns false when no writers are configured", () => {
+    const l = createLogger();
+    expect(l.isLevelEnabled("error")).toBe(false);
+  });
+
+  it("considers per-writer logLevel overrides", () => {
+    const w: LogWriter = Object.assign(vi.fn() as unknown as LogWriter, {
+      logLevel: "trace" as const,
+    });
+    const l = createLogger({ logLevel: "error", writers: [w] });
+    // Writer allows trace, so even though logger default is error, trace is enabled
+    expect(l.isLevelEnabled("trace")).toBe(true);
+  });
+
+  it("returns false when all writers suppress the level", () => {
+    const w: LogWriter = Object.assign(vi.fn() as unknown as LogWriter, {
+      logLevel: "error" as const,
+    });
+    const l = createLogger({ logLevel: "trace", writers: [w] });
+    expect(l.isLevelEnabled("debug")).toBe(false);
+    expect(l.isLevelEnabled("error")).toBe(true);
+  });
+
+  it("works on child loggers", () => {
+    const writer = vi.fn<LogWriter>();
+    const parent = createLogger({ logLevel: "warn", writers: [writer] });
+    const child = parent.child({ id: "x" });
+    expect(child.isLevelEnabled("info")).toBe(false);
+    expect(child.isLevelEnabled("warn")).toBe(true);
+  });
+});
+
+describe("pretty-printing objects in plain format", () => {
+  const originalForce = process.env["FORCE_COLOR"];
+  const originalNoColor = process.env["NO_COLOR"];
+
+  beforeAll(() => {
+    delete process.env["FORCE_COLOR"];
+    process.env["NO_COLOR"] = "1";
+    invalidateColorCache();
+  });
+
+  afterAll(() => {
+    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
+    else process.env["FORCE_COLOR"] = originalForce;
+    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
+    else process.env["NO_COLOR"] = originalNoColor;
+    invalidateColorCache();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("formats plain objects with util.inspect style output", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer] });
+    l.info({ name: "Alice", age: 30 });
+
+    const output = writer.mock.calls[0]![1] as string;
+    // util.inspect uses single quotes and key: value without quotes on keys
+    expect(output).toContain("name:");
+    expect(output).toContain("Alice");
+    expect(output).toContain("age:");
+    expect(output).toContain("30");
+  });
+
+  it("formats nested objects readably", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer] });
+    l.info({ user: { name: "Bob", roles: ["admin", "user"] } });
+
+    const output = writer.mock.calls[0]![1] as string;
+    expect(output).toContain("user:");
+    expect(output).toContain("name:");
+    expect(output).toContain("Bob");
+    expect(output).toContain("roles:");
+    expect(output).toContain("admin");
+  });
+
+  it("formats arrays readably", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ writers: [writer] });
+    l.info([1, 2, 3]);
+
+    const output = writer.mock.calls[0]![1] as string;
+    expect(output).toContain("1");
+    expect(output).toContain("2");
+    expect(output).toContain("3");
+  });
+
+  it("does not affect JSON format output", () => {
+    const writer = vi.fn<LogWriter>();
+    const l = createLogger({ format: "json", writers: [writer] });
+    l.info({ name: "Alice" });
+
+    const jsonStr = writer.mock.calls[0]![1] as string;
+    const parsed = JSON.parse(jsonStr);
+    expect(parsed.level).toBe("info");
+    expect(parsed.data).toEqual({ name: "Alice" });
   });
 });

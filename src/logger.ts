@@ -6,8 +6,24 @@ import {
   type BgColorName,
   type ModifierName,
 } from "@/styled";
+import { shouldUseColor } from "@/color-support";
 import { consoleWriter } from "@/writers";
 import type { LogWriter } from "@/writers";
+import { inspect } from "node:util";
+
+/**
+ * Pretty-prints a value using `util.inspect` for readable output in plain format.
+ * Respects color settings and handles circular references, nested objects, etc.
+ */
+function inspectValue(value: unknown): string {
+  return inspect(value, {
+    colors: shouldUseColor(),
+    depth: 4,
+    maxArrayLength: 100,
+    breakLength: 80,
+    compact: 3,
+  });
+}
 
 const STYLE_FN_NAMES = new Set(["rgb", "bgRgb", "hex", "bgHex"]);
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error";
@@ -137,6 +153,7 @@ export type Logger = {
   warn: (...args: unknown[]) => void;
   error: (...args: unknown[]) => void;
   setLevel: (level: LogLevel) => void;
+  isLevelEnabled: (level: MethodLogLevel) => boolean;
   child: (metadata: Record<string, unknown>) => Logger;
 } & typeof styled;
 
@@ -303,6 +320,21 @@ const ALL_LEVEL_WEIGHTS: Record<MethodLogLevel, number> = {
   error: 50,
 };
 
+/**
+ * Creates a new {@link Logger} instance with the given options.
+ *
+ * The logger supports leveled logging (`trace`, `debug`, `info`, `warn`, `error`),
+ * inline style options, JSON output format, timestamps, metadata, and custom writers.
+ *
+ * @param options - Configuration for the logger (level, format, writers, metadata, etc.).
+ * @returns A fully configured {@link Logger} instance with chainable ANSI style methods.
+ *
+ * @example
+ * ```ts
+ * const log = createLogger({ logLevel: "debug", showTime: true });
+ * log.info("Server started on port", 3000);
+ * ```
+ */
 export function createLogger(options?: LoggerOptions): Logger {
   const rawEnv = (globalThis as any).process?.env?.LOG_LEVEL as string | undefined;
   const envLevel = rawEnv?.toLowerCase();
@@ -338,11 +370,7 @@ export function createLogger(options?: LoggerOptions): Logger {
     }
     if (value instanceof Error) return value.stack ?? value.message;
     if (value === null || value === undefined) return String(value);
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
+    return inspectValue(value);
   };
 
   const withPrefix = (method: LogLevel, args: unknown[]): unknown[] => {
@@ -431,6 +459,29 @@ export function createLogger(options?: LoggerOptions): Logger {
     setLevel(level?: LogLevel) {
       setLevel(level);
     },
+    /**
+     * Returns `true` if the given level would produce output for at least one writer.
+     * Use this to skip expensive string formatting when the message would be suppressed.
+     *
+     * @param level - The log level to check.
+     * @returns Whether a message at this level would be emitted.
+     *
+     * @example
+     * ```ts
+     * if (logger.isLevelEnabled("debug")) {
+     *   logger.debug("Payload:", JSON.stringify(hugeObject));
+     * }
+     * ```
+     */
+    isLevelEnabled(level: MethodLogLevel): boolean {
+      if (!writers) return false;
+      const weight = ALL_LEVEL_WEIGHTS[level];
+      for (const writer of writers) {
+        const writerMin = writer.logLevel !== undefined ? ALL_LEVEL_WEIGHTS[writer.logLevel] : min;
+        if (weight >= writerMin) return true;
+      }
+      return false;
+    },
     child(childMetadata: Record<string, unknown>) {
       const childOptions: LoggerOptions = {
         showTime,
@@ -471,4 +522,15 @@ export function createLogger(options?: LoggerOptions): Logger {
   }) as Logger;
 }
 
+/**
+ * Default {@link Logger} instance pre-configured with a {@link consoleWriter}.
+ *
+ * Uses log level `"info"` (or the `LOG_LEVEL` environment variable) and plain text format.
+ *
+ * @example
+ * ```ts
+ * import { logger } from "jk-log";
+ * logger.info("Hello, world!");
+ * ```
+ */
 export const logger = createLogger({ writers: [consoleWriter()] });
