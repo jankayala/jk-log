@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Log rotation for `fileWriter`** — two new rotation strategies that can be used independently or combined:
+  - `maxFileSize` — rotate when the file exceeds a byte threshold (size-based rotation).
+  - `rotationInterval` — rotate after a time interval in milliseconds (time-based rotation).
+  - `maxFiles` — limit the number of retained backup files (e.g., `app.1.log`, `app.2.log`, …). Defaults to `5`.
+- Rotated files use an index inserted before the file extension (`app.1.log`) or appended for extensionless paths (`app.1`).
+- A background timer automatically triggers time-based rotation even when no log calls occur; the timer is `unref()`'d to avoid blocking process exit.
+- Full test coverage (100% statements, branches, functions, and lines) for all rotation paths.
+
 ## [2.0.0] - 2026-05-08
 
 ### Added

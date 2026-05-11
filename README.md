@@ -64,12 +64,12 @@ LOG_LEVEL=debug node app.js
 import { createLogger } from "jk-log";
 
 const log = createLogger({
-  showTime: true,       // ISO timestamp prefix
-  format: "json",       // "plain" (default) or "json"
-  logLevel: "debug",    // minimum log level
+  showTime: true, // ISO timestamp prefix
+  format: "json", // "plain" (default) or "json"
+  logLevel: "debug", // minimum log level
   levelColors: { error: "magenta" },
   levelLabels: { info: "[ℹ]", warn: "[⚠]" },
-  metadata: { app: "my-server", env: "production" },  // included in every entry
+  metadata: { app: "my-server", env: "production" }, // included in every entry
 });
 
 log.info("Server started on port 3000");
@@ -79,13 +79,20 @@ log.error("Something went wrong", { code: 500 });
 ### JSON format
 
 When `format: "json"`:
+
 ```json
-{ "level": "info", "timestamp": "2026-05-05T12:00:00.000Z", "message": "Server started", "app": "my-server" }
+{
+  "level": "info",
+  "timestamp": "2026-05-05T12:00:00.000Z",
+  "message": "Server started",
+  "app": "my-server"
+}
 ```
 
 ### Child loggers
 
 Create a derived logger with merged metadata:
+
 ```ts
 const reqLog = log.child({ requestId: "abc-123" });
 reqLog.info("Handling request");
@@ -113,14 +120,14 @@ const log = createLogger({
 });
 ```
 
-| Option         | Type   | Default       | Description                                          |
-| -------------- | ------ | ------------- | ---------------------------------------------------- |
-| `methodMapping`| object | `{}`          | Map log levels to console methods (e.g. `warn→error`)|
-| `logLevel`     | string | —             | Override the logger's minimum level for this writer  |
+| Option          | Type   | Default | Description                                           |
+| --------------- | ------ | ------- | ----------------------------------------------------- |
+| `methodMapping` | object | `{}`    | Map log levels to console methods (e.g. `warn→error`) |
+| `logLevel`      | string | —       | Override the logger's minimum level for this writer   |
 
 ### fileWriter
 
-Buffered file output with automatic flushing.
+Buffered file output with automatic flushing and log rotation.
 
 ```ts
 import { createLogger, fileWriter } from "jk-log";
@@ -136,13 +143,35 @@ log.error("Error details", new Error("fail"));
 log.writers?.[0]?.destroy?.();
 ```
 
-| Option       | Type    | Default | Description                                      |
-| ------------ | ------- | ------- | ------------------------------------------------ |
-| `filePath`   | string  | —       | Path to the log file (required)                  |
-| `stripAnsi`  | boolean | `true`  | Strip ANSI sequences before writing              |
-| `overwrite`  | boolean | `false` | Overwrite file on open instead of appending      |
-| `logLevel`   | string  | —       | Override the logger's minimum level              |
-| `bufferSize` | number  | `8192`  | Bytes to buffer before flush (`0` = no buffering)|
+#### Log rotation
+
+Rotate log files by size, time interval, or both:
+
+```ts
+const log = createLogger({
+  writers: [
+    fileWriter({
+      filePath: "./app.log",
+      maxFileSize: 10 * 1024 * 1024, // 10 MB
+      maxFiles: 5, // keep app.1.log … app.5.log
+      rotationInterval: 86_400_000, // rotate daily (24h in ms)
+    }),
+  ],
+});
+```
+
+Rotated files are named `app.1.log`, `app.2.log`, …, where `.1` is the most recent. Files without an extension use `app.1`, `app.2`, etc.
+
+| Option             | Type    | Default | Description                                                    |
+| ------------------ | ------- | ------- | -------------------------------------------------------------- |
+| `filePath`         | string  | —       | Path to the log file (required)                                |
+| `stripAnsi`        | boolean | `true`  | Strip ANSI sequences before writing                            |
+| `overwrite`        | boolean | `false` | Overwrite file on open instead of appending                    |
+| `logLevel`         | string  | —       | Override the logger's minimum level                            |
+| `bufferSize`       | number  | `8192`  | Bytes to buffer before flush (`0` = no buffering)              |
+| `maxFileSize`      | number  | `0`     | Max file size in bytes before rotating (`0` = disabled)        |
+| `maxFiles`         | number  | `5`     | Number of rotated backup files to keep                         |
+| `rotationInterval` | number  | `0`     | Max age of the log file in ms before rotating (`0` = disabled) |
 
 ### httpWriter
 
@@ -165,31 +194,31 @@ const log = createLogger({
 log.info("Sent via HTTP");
 ```
 
-| Option           | Type    | Default   | Description                                      |
-| ---------------- | ------- | --------- | ------------------------------------------------ |
-| `url`            | string  | —         | JSON-RPC endpoint URL (required)                 |
-| `method`         | string  | `"log"`   | JSON-RPC method name                             |
-| `stripAnsi`      | boolean | `true`    | Strip ANSI before sending                        |
-| `logLevel`       | string  | —         | Override the logger's minimum level              |
-| `headers`        | object  | `{}`      | Additional HTTP headers                          |
-| `batchSize`      | number  | `1`       | Items before flush (`1` = send immediately)      |
-| `flushInterval`  | number  | `5000`    | Max ms to wait before flushing a partial batch   |
-| `highWaterMark`  | number  | `16384`   | Byte threshold before flush (16 KB)              |
-| `timeout`        | number  | `30000`   | Request timeout in ms                            |
-| `maxBufferSize`  | number  | `10000`   | Max buffered items before dropping entries       |
+| Option          | Type    | Default | Description                                    |
+| --------------- | ------- | ------- | ---------------------------------------------- |
+| `url`           | string  | —       | JSON-RPC endpoint URL (required)               |
+| `method`        | string  | `"log"` | JSON-RPC method name                           |
+| `stripAnsi`     | boolean | `true`  | Strip ANSI before sending                      |
+| `logLevel`      | string  | —       | Override the logger's minimum level            |
+| `headers`       | object  | `{}`    | Additional HTTP headers                        |
+| `batchSize`     | number  | `1`     | Items before flush (`1` = send immediately)    |
+| `flushInterval` | number  | `5000`  | Max ms to wait before flushing a partial batch |
+| `highWaterMark` | number  | `16384` | Byte threshold before flush (16 KB)            |
+| `timeout`       | number  | `30000` | Request timeout in ms                          |
+| `maxBufferSize` | number  | `10000` | Max buffered items before dropping entries     |
 
 ## API overview
 
-| Export                   | Description                                                                                                                             |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `logger`                 | Default logger instance (log level `info`). Proxy with all style methods, `log`, `info`, `warn`, `error`, `debug`, `trace`, `setLevel`. |
-| `styled`                 | Callable ANSI string builder. Supports chaining: colors, backgrounds, modifiers, `rgb`/`hex`/`bgRgb`/`bgHex`.                           |
-| `createLogger(options?)` | Creates a custom logger. Options: `showTime`, `format`, `logLevel`, `levelColors`, `levelLabels`, `metadata`, `writers`.                 |
-| `consoleWriter(options?)` | Creates a console output writer.                                                                                                       |
-| `fileWriter(options)`     | Creates a buffered file output writer.                                                                                                 |
-| `httpWriter(options)`     | Creates an HTTP JSON-RPC output writer.                                                                                                |
-| `shouldUseColor()`       | Returns `boolean` — whether color output is enabled.                                                                                    |
-| `stripAnsi(text)`        | Removes ANSI escape sequences from a string.                                                                                            |
+| Export                    | Description                                                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `logger`                  | Default logger instance (log level `info`). Proxy with all style methods, `log`, `info`, `warn`, `error`, `debug`, `trace`, `setLevel`. |
+| `styled`                  | Callable ANSI string builder. Supports chaining: colors, backgrounds, modifiers, `rgb`/`hex`/`bgRgb`/`bgHex`.                           |
+| `createLogger(options?)`  | Creates a custom logger. Options: `showTime`, `format`, `logLevel`, `levelColors`, `levelLabels`, `metadata`, `writers`.                |
+| `consoleWriter(options?)` | Creates a console output writer.                                                                                                        |
+| `fileWriter(options)`     | Creates a buffered file output writer.                                                                                                  |
+| `httpWriter(options)`     | Creates an HTTP JSON-RPC output writer.                                                                                                 |
+| `shouldUseColor()`        | Returns `boolean` — whether color output is enabled.                                                                                    |
+| `stripAnsi(text)`         | Removes ANSI escape sequences from a string.                                                                                            |
 
 ## Color policy
 
