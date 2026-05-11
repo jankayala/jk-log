@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v2.0.1] - 2026-05-11
 
 ### Added
 
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance: incremental `StyleAnalysis` in `styled` chains** — adding a style to a chain no longer re-scans all previous styles to classify foreground/background conflicts. Analysis is extended in O(1) via `extendAnalysis()` instead of recomputed in O(n) via the removed `analyzeStyles()`.
 - **Performance: Logger Proxy method caching** — bound logger methods (`log`, `info`, `warn`, etc.) are now cached in a `Map` on first access, eliminating repeated `Function.prototype.bind` calls in hot loops.
 
-## [2.0.0] - 2026-05-08
+## [v2.0.0] - 2026-05-08
 
 ### Added
 
