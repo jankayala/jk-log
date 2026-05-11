@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Plain format `formatArg` now uses `util.inspect` for objects/arrays instead of `JSON.stringify`, producing more readable output with color support and circular-reference handling.
+- **Performance: `shouldUseColor()` called once per styled invocation** — previously called once per ANSI style in the chain (e.g., `styled.red.bold.italic("text")` triggered 3 calls); now checked a single time before applying all styles.
+- **Performance: incremental `StyleAnalysis` in `styled` chains** — adding a style to a chain no longer re-scans all previous styles to classify foreground/background conflicts. Analysis is extended in O(1) via `extendAnalysis()` instead of recomputed in O(n) via the removed `analyzeStyles()`.
+- **Performance: Logger Proxy method caching** — bound logger methods (`log`, `info`, `warn`, etc.) are now cached in a `Map` on first access, eliminating repeated `Function.prototype.bind` calls in hot loops.
 
 ## [2.0.0] - 2026-05-08
 

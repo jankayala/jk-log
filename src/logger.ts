@@ -496,18 +496,30 @@ export function createLogger(options?: LoggerOptions): Logger {
     },
   };
 
+  const methodCache = new Map<string, unknown>();
+
   return new Proxy(base as unknown as Logger, {
     get(target, prop: string | symbol) {
-      if (typeof prop === "string" && prop in target) {
-        const value = (target as any)[prop as string];
-        return typeof value === "function" ? value.bind(target) : value;
-      }
       if (typeof prop === "string") {
+        const cached = methodCache.get(prop);
+        if (cached !== undefined) return cached;
+
+        if (prop in target) {
+          const value = (target as any)[prop as string];
+          if (typeof value === "function") {
+            const bound = value.bind(target);
+            methodCache.set(prop, bound);
+            return bound;
+          }
+          return value;
+        }
+
         if (prop in ANSI_CODES) {
-          return createSimpleStyled(
+          const result = createSimpleStyled(
             (s: string) => callLog("log", [s]),
             (styled as any)[prop as StyleName],
           );
+          return result;
         }
 
         // rgb/bgRgb/hex/bgHex are functions on `styled` that accept args

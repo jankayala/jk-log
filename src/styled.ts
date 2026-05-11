@@ -255,10 +255,6 @@ function isBackgroundStyle(style: AppliedStyle): boolean {
 }
 
 function applyStyle(text: string, style: AppliedStyle): string {
-  if (!shouldUseColor()) {
-    return text;
-  }
-
   if (typeof style === "string") {
     const codes = ANSI_CODES[style];
     if (!codes) return text;
@@ -275,33 +271,46 @@ function applyStyle(text: string, style: AppliedStyle): string {
   return `\x1b[${open}m${text}\x1b[${close}m`;
 }
 
-function analyzeStyles(styles: AppliedStyle[]): StyleAnalysis {
-  const foregrounds: string[] = [];
-  const backgroundStyles: string[] = [];
+const EMPTY_ANALYSIS: StyleAnalysis = { textStyles: [], backgroundStyles: [] };
 
-  for (const style of styles) {
-    const formatted = formatStyleName(style);
-    if (isTextStyle(style)) foregrounds.push(formatted);
-    if (isBackgroundStyle(style)) backgroundStyles.push(formatted);
+function extendAnalysis(analysis: StyleAnalysis, newStyle: AppliedStyle): StyleAnalysis {
+  const formatted = formatStyleName(newStyle);
+  if (isTextStyle(newStyle)) {
+    return {
+      textStyles: [...analysis.textStyles, formatted],
+      backgroundStyles: analysis.backgroundStyles,
+    };
   }
-
-  return { textStyles: foregrounds, backgroundStyles: backgroundStyles };
+  if (isBackgroundStyle(newStyle)) {
+    return {
+      textStyles: analysis.textStyles,
+      backgroundStyles: [...analysis.backgroundStyles, formatted],
+    };
+  }
+  return analysis;
 }
 
-function createStyledWith(existing: AppliedStyle[], newStyle: AppliedStyle): Styled {
+function createStyledWith(
+  existing: AppliedStyle[],
+  newStyle: AppliedStyle,
+  analysis: StyleAnalysis,
+): Styled {
   const next = new Array<AppliedStyle>(existing.length + 1);
   for (let i = 0; i < existing.length; i++) {
     next[i] = existing[i]!;
   }
   next[existing.length] = newStyle;
-  return createStyled(next);
+  return createStyled(next, extendAnalysis(analysis, newStyle));
 }
 
 function createStyled(
   styles: AppliedStyle[] = [],
-  analysis: StyleAnalysis = analyzeStyles(styles),
+  analysis: StyleAnalysis = EMPTY_ANALYSIS,
 ): Styled {
   const fn = ((text: string) => {
+    if (!shouldUseColor()) {
+      return text;
+    }
     let result = text;
     for (let i = 0; i < styles.length; i++) {
       result = applyStyle(result, styles[i]!);
@@ -326,7 +335,7 @@ function createStyled(
             );
           }
 
-          return createStyledWith(styles, newStyle);
+          return createStyledWith(styles, newStyle, analysis);
         };
       }
 
@@ -341,7 +350,7 @@ function createStyled(
             );
           }
 
-          return createStyledWith(styles, newStyle);
+          return createStyledWith(styles, newStyle, analysis);
         };
       }
 
@@ -356,7 +365,7 @@ function createStyled(
             );
           }
 
-          return createStyledWith(styles, newStyle);
+          return createStyledWith(styles, newStyle, analysis);
         };
       }
 
@@ -371,7 +380,7 @@ function createStyled(
             );
           }
 
-          return createStyledWith(styles, newStyle);
+          return createStyledWith(styles, newStyle, analysis);
         };
       }
 
@@ -393,7 +402,7 @@ function createStyled(
           );
         }
 
-        return createStyledWith(styles, newStyle);
+        return createStyledWith(styles, newStyle, analysis);
       }
 
       throw new Error(`Unknown style: ${String(prop)}`);
