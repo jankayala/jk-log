@@ -103,4 +103,18 @@ describe("consoleWriter", () => {
     writer("warn", "still warn");
     expect(warnSpy).toHaveBeenCalledWith("still warn");
   });
+
+  it("maps fatal level to console.error", () => {
+    const writer = consoleWriter();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    writer("fatal", "critical failure");
+    expect(errorSpy).toHaveBeenCalledWith("critical failure");
+  });
+
+  it("maps silent level to console.log", () => {
+    const writer = consoleWriter();
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    writer("silent", "should not normally happen");
+    expect(logSpy).toHaveBeenCalledWith("should not normally happen");
+  });
 });

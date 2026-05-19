@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.1.0] - 2026-05-19
+
+### Added
+
+- **`fatal` log level** — new highest-severity level (weight `60`, above `error`). Uses magenta color and `[FATAL]` label. Maps to `console.error` in the console writer.
+- **`silent` log level** — set `logLevel: "silent"` (weight: `Infinity`) to suppress all output without removing the logger. Useful for testing or temporarily muting a logger.
+- **`logger.flush()` method** — flushes all pending buffered entries across all writers. Useful before process exit to avoid losing logs in `fileWriter` or `httpWriter`.
+- **`logger.destroy()` method** — calls `destroy()` on all writers, flushing pending data and releasing resources (file descriptors, HTTP agents).
+- **`flush` property on `LogWriter` type** — writers can now expose a `flush()` method for flushing without destroying. Both `fileWriter` and `httpWriter` implement it.
+- **`engines` field in `package.json`** — specifies `"node": ">=18"` as the minimum supported Node.js version.
+
+### Changed
+
+- `LogLevel` type now includes `"fatal"` and `"silent"`.
+- `MethodLogLevel` type now includes `"fatal"` and `"silent"`.
+- `DEFAULT_LEVEL_COLORS` and `DEFAULT_LEVEL_LABELS` now include entries for `fatal`.
+- `Logger` type now includes `fatal()`, `flush()`, and `destroy()` methods.
+- Console writer maps `fatal` to `console.error` since `console.fatal` does not exist.
+
 ## [v2.0.1] - 2026-05-11
 
 ### Added

@@ -217,6 +217,8 @@ export function fileWriter(options: FileWriterOptions): LogWriter {
     writer.logLevel = options.logLevel;
   }
 
+  writer.flush = flush;
+
   /** Flush pending entries, close the file descriptor, and release resources. */
   writer.destroy = () => {
     if (destroyed) return;

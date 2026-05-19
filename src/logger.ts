@@ -26,14 +26,14 @@ function inspectValue(value: unknown): string {
 }
 
 const STYLE_FN_NAMES = new Set(["rgb", "bgRgb", "hex", "bgHex"]);
-export type LogLevel = "trace" | "debug" | "info" | "warn" | "error";
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal" | "silent";
 export type MethodLogLevel = LogLevel | "log";
 
 export type LogFormat = "plain" | "json";
 
-export type LoggerLevelColors = Record<LogLevel, ColorName>;
+export type LoggerLevelColors = Record<Exclude<LogLevel, "silent">, ColorName>;
 
-export type LoggerLevelLabels = Record<LogLevel, string>;
+export type LoggerLevelLabels = Record<Exclude<LogLevel, "silent">, string>;
 
 export type LoggerLevelColorOverrides = Partial<LoggerLevelColors>;
 
@@ -116,7 +116,7 @@ type LoggerBackgroundStyleConflict = {
 } & LoggerBackgroundStyleConflictMessage;
 
 type JsonLogOutput = {
-  level: Exclude<MethodLogLevel, "log">;
+  level: Exclude<MethodLogLevel, "log" | "silent">;
   timestamp?: string;
   message?: string;
   messages?: unknown[];
@@ -135,6 +135,7 @@ export const DEFAULT_LEVEL_COLORS: LoggerLevelColors = {
   info: "blue",
   warn: "yellow",
   error: "red",
+  fatal: "magenta",
 };
 
 export const DEFAULT_LEVEL_LABELS: LoggerLevelLabels = {
@@ -143,6 +144,7 @@ export const DEFAULT_LEVEL_LABELS: LoggerLevelLabels = {
   info: "[INFO]",
   warn: "[WARN]",
   error: "[ERROR]",
+  fatal: "[FATAL]",
 };
 
 export type Logger = {
@@ -152,9 +154,12 @@ export type Logger = {
   info: (...args: unknown[]) => void;
   warn: (...args: unknown[]) => void;
   error: (...args: unknown[]) => void;
+  fatal: (...args: unknown[]) => void;
   setLevel: (level: LogLevel) => void;
   isLevelEnabled: (level: MethodLogLevel) => boolean;
   child: (metadata: Record<string, unknown>) => Logger;
+  flush: () => void;
+  destroy: () => void;
 } & typeof styled;
 
 function createSimpleStyled(loggerLog: (s: string) => void, currentStyle: typeof styled = styled) {
@@ -318,6 +323,8 @@ const ALL_LEVEL_WEIGHTS: Record<MethodLogLevel, number> = {
   log: 35,
   warn: 40,
   error: 50,
+  fatal: 60,
+  silent: Infinity,
 };
 
 /**
@@ -352,7 +359,7 @@ export function createLogger(options?: LoggerOptions): Logger {
   };
 
   const isConfigLevel = (value: string): value is LogLevel =>
-    Object.prototype.hasOwnProperty.call(DEFAULT_LEVEL_LABELS, value);
+    Object.prototype.hasOwnProperty.call(DEFAULT_LEVEL_LABELS, value) || value === "silent";
 
   const resolve = (opt?: string): LogLevel => {
     if (typeof opt === "string" && isConfigLevel(opt)) return opt;
@@ -373,7 +380,7 @@ export function createLogger(options?: LoggerOptions): Logger {
     return inspectValue(value);
   };
 
-  const withPrefix = (method: LogLevel, args: unknown[]): unknown[] => {
+  const withPrefix = (method: Exclude<LogLevel, "silent">, args: unknown[]): unknown[] => {
     if (format === "json") {
       const jsonOutput: JsonLogOutput = {
         level: method,
@@ -456,6 +463,9 @@ export function createLogger(options?: LoggerOptions): Logger {
     error(...args: unknown[]) {
       callLog("error", withPrefix("error", args));
     },
+    fatal(...args: unknown[]) {
+      callLog("fatal", withPrefix("fatal", args));
+    },
     setLevel(level?: LogLevel) {
       setLevel(level);
     },
@@ -493,6 +503,18 @@ export function createLogger(options?: LoggerOptions): Logger {
       if (options?.levelLabels !== undefined) childOptions.levelLabels = options.levelLabels;
       if (writers !== undefined) childOptions.writers = writers;
       return createLogger(childOptions);
+    },
+    flush() {
+      if (!writers) return;
+      for (const writer of writers) {
+        writer.flush?.();
+      }
+    },
+    destroy() {
+      if (!writers) return;
+      for (const writer of writers) {
+        writer.destroy?.();
+      }
     },
   };
 

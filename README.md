@@ -37,14 +37,22 @@ logger.bgBlue.white("White text on blue background");
 
 ## Log levels
 
-Five levels (lowest to highest): `trace`, `debug`, `info`, `warn`, `error`. Default: `info`.
+Seven levels (lowest to highest): `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `silent`. Default: `info`.
 
 ```ts
+logger.trace("Won't print either");
+logger.debug("Won't print at default level");
 logger.info("Informational message");
 logger.warn("Warning");
 logger.error("Error");
-logger.debug("Won't print at default level");
-logger.trace("Won't print either");
+logger.fatal("Critical failure — system shutting down");
+```
+
+Set level to `"silent"` to suppress all output:
+
+```ts
+const log = createLogger({ logLevel: "silent", writers: [consoleWriter()] });
+log.error("This won't print");
 ```
 
 Change at runtime or via `LOG_LEVEL` env var:
@@ -108,6 +116,20 @@ const reqLog = log.child({ requestId: "abc-123" });
 reqLog.info("Handling request");
 ```
 
+### Flushing and destroying
+
+Flush pending buffered data across all writers (e.g., before process exit):
+
+```ts
+log.flush();
+```
+
+Destroy all writers (flush + release resources like file descriptors and HTTP agents):
+
+```ts
+log.destroy();
+```
+
 ## Inline style options for `logger.log`
 
 ```ts
@@ -150,7 +172,7 @@ log.info("Logged to a file");
 log.error("Error details", new Error("fail"));
 
 // Flush and close when done
-log.writers?.[0]?.destroy?.();
+log.destroy();
 ```
 
 #### Log rotation
@@ -219,16 +241,16 @@ log.info("Sent via HTTP");
 
 ## API overview
 
-| Export                    | Description                                                                                                                                               |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `logger`                  | Default logger instance (log level `info`). Proxy with all style methods, `log`, `info`, `warn`, `error`, `debug`, `trace`, `setLevel`, `isLevelEnabled`. |
-| `styled`                  | Callable ANSI string builder. Supports chaining: colors, backgrounds, modifiers, `rgb`/`hex`/`bgRgb`/`bgHex`.                                             |
-| `createLogger(options?)`  | Creates a custom logger. Options: `showTime`, `format`, `logLevel`, `levelColors`, `levelLabels`, `metadata`, `writers`.                                  |
-| `consoleWriter(options?)` | Creates a console output writer.                                                                                                                          |
-| `fileWriter(options)`     | Creates a buffered file output writer with optional log rotation.                                                                                         |
-| `httpWriter(options)`     | Creates an HTTP JSON-RPC output writer.                                                                                                                   |
-| `shouldUseColor()`        | Returns `boolean` — whether color output is enabled.                                                                                                      |
-| `stripAnsi(text)`         | Removes ANSI escape sequences from a string.                                                                                                              |
+| Export                    | Description                                                                                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `logger`                  | Default logger instance (log level `info`). Proxy with all style methods, `log`, `info`, `warn`, `error`, `fatal`, `debug`, `trace`, `setLevel`, `isLevelEnabled`, `flush`, `destroy`. |
+| `styled`                  | Callable ANSI string builder. Supports chaining: colors, backgrounds, modifiers, `rgb`/`hex`/`bgRgb`/`bgHex`.                                                                          |
+| `createLogger(options?)`  | Creates a custom logger. Options: `showTime`, `format`, `logLevel`, `levelColors`, `levelLabels`, `metadata`, `writers`.                                                               |
+| `consoleWriter(options?)` | Creates a console output writer.                                                                                                                                                       |
+| `fileWriter(options)`     | Creates a buffered file output writer with optional log rotation.                                                                                                                      |
+| `httpWriter(options)`     | Creates an HTTP JSON-RPC output writer.                                                                                                                                                |
+| `shouldUseColor()`        | Returns `boolean` — whether color output is enabled.                                                                                                                                   |
+| `stripAnsi(text)`         | Removes ANSI escape sequences from a string.                                                                                                                                           |
 
 ## Pretty-printing
 

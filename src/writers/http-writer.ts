@@ -252,6 +252,8 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
     }
   };
 
+  writer.flush = flush;
+
   /** Flush pending entries and destroy the agent. */
   writer.destroy = () => {
     if (destroyed) return;

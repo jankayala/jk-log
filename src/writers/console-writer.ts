@@ -28,7 +28,16 @@ export function consoleWriter(options?: ConsoleWriterOptions): LogWriter {
   // Pre-resolve method names once to avoid repeated optional-chain lookups per call.
   const methodFor: Record<string, MethodLogLevel> = Object.create(null);
   if (mapping) {
-    const levels: MethodLogLevel[] = ["trace", "debug", "info", "log", "warn", "error"];
+    const levels: MethodLogLevel[] = [
+      "trace",
+      "debug",
+      "info",
+      "log",
+      "warn",
+      "error",
+      "fatal",
+      "silent",
+    ];
     for (const level of levels) {
       methodFor[level] = mapping[level] ?? level;
     }
@@ -38,8 +47,19 @@ export function consoleWriter(options?: ConsoleWriterOptions): LogWriter {
     ? (level: MethodLogLevel) => methodFor[level]!
     : (level: MethodLogLevel) => level;
 
+  /** Map MethodLogLevel to a valid console method name. */
+  const toConsoleMethod = (level: MethodLogLevel): string => {
+    const resolved = resolve(level);
+    if (resolved === "fatal") return "error";
+    if (resolved === "silent") return "log";
+    return resolved;
+  };
+
   const writer: LogWriter = (level: MethodLogLevel, ...args: unknown[]) => {
-    (console[resolve(level)] as (...a: unknown[]) => void).call(console, ...args);
+    (console[toConsoleMethod(level) as keyof Console] as (...a: unknown[]) => void).call(
+      console,
+      ...args,
+    );
   };
 
   if (options?.logLevel !== undefined) {

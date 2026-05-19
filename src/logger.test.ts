@@ -512,6 +512,7 @@ describe("createLogger and LOG_LEVEL behavior", () => {
       info: "[INFO]",
       warn: "[WARN]",
       error: "[ERROR]",
+      fatal: "[FATAL]",
     });
     expect(DEFAULT_LEVEL_LABELS).not.toHaveProperty("log");
     expect(DEFAULT_LEVEL_LABELS).not.toHaveProperty("off");
@@ -1177,5 +1178,61 @@ describe("pretty-printing objects in plain format", () => {
     const parsed = JSON.parse(jsonStr);
     expect(parsed.level).toBe("info");
     expect(parsed.data).toEqual({ name: "Alice" });
+  });
+
+  it("fatal() logs at fatal level with prefix", () => {
+    vi.stubEnv("FORCE_COLOR", "1");
+    const output: unknown[][] = [];
+    const writer: any = (level: string, ...args: unknown[]) => {
+      output.push([level, ...args]);
+    };
+    const log = createLogger({ logLevel: "trace", writers: [writer] });
+    log.fatal("system down");
+    expect(output.length).toBe(1);
+    expect(output[0]![0]).toBe("fatal");
+    expect(output[0]![1]).toContain("[FATAL]");
+    expect(output[0]![1]).toContain("system down");
+  });
+
+  it("silent level suppresses all output", () => {
+    const output: unknown[][] = [];
+    const writer: any = (level: string, ...args: unknown[]) => {
+      output.push([level, ...args]);
+    };
+    const log = createLogger({ logLevel: "silent", writers: [writer] });
+    log.fatal("should not print");
+    log.error("should not print");
+    log.info("should not print");
+    expect(output.length).toBe(0);
+  });
+
+  it("flush() calls flush on all writers", () => {
+    const flushFn = vi.fn();
+    const writer: any = (_level: string, ..._args: unknown[]) => {};
+    writer.flush = flushFn;
+    const log = createLogger({ writers: [writer] });
+    log.flush();
+    expect(flushFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("flush() does nothing without writers", () => {
+    const log = createLogger();
+    // Should not throw
+    log.flush();
+  });
+
+  it("destroy() calls destroy on all writers", () => {
+    const destroyFn = vi.fn();
+    const writer: any = (_level: string, ..._args: unknown[]) => {};
+    writer.destroy = destroyFn;
+    const log = createLogger({ writers: [writer] });
+    log.destroy();
+    expect(destroyFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("destroy() does nothing without writers", () => {
+    const log = createLogger();
+    // Should not throw
+    log.destroy();
   });
 });
