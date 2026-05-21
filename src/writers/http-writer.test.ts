@@ -306,8 +306,8 @@ describe("httpWriter", () => {
     expect(body.params.messages).toEqual([42, { key: "val" }, null]);
   });
 
-  it("queues a pending flush when flush is called while in-flight", () => {
-    // Override mock to NOT auto-fire "end", so inFlight stays true
+  it("sends concurrent requests without head-of-line blocking", () => {
+    // Override mock to NOT auto-fire "end", so first request stays in-flight
     let endCallback: (() => void) | null = null;
     fakeResOn.mockImplementation((_event: string, cb: () => void) => {
       if (_event === "end") endCallback = cb;
@@ -317,16 +317,12 @@ describe("httpWriter", () => {
     writer("info", "first");
     expect(httpRequest).toHaveBeenCalledTimes(1);
 
-    // Now inFlight is true. Write another entry which triggers flush again.
+    // Write another entry — should send immediately without waiting for first to complete
     writer("info", "second");
-    // flush was called but should have set pendingFlush=true since inFlight
-    // The second request is NOT sent yet
-    expect(httpRequest).toHaveBeenCalledTimes(1);
-
-    // Now simulate the first response completing
-    endCallback!();
-    // onComplete should have flushed the pending buffer
     expect(httpRequest).toHaveBeenCalledTimes(2);
+
+    // Complete the first request
+    endCallback!();
   });
 
   it("flushes via queueMicrotask when flushInterval is 0", async () => {

@@ -128,15 +128,10 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
   let flushScheduled = false;
   let destroyed = false;
-  let inFlight = false;
-  let pendingFlush = false;
+  let inFlightCount = 0;
 
   function flush() {
     if (bufferItems.length === 0) return;
-    if (inFlight) {
-      pendingFlush = true;
-      return;
-    }
 
     const body = bufferItems.length === 1 ? bufferItems[0]! : "[" + bufferItems.join(",") + "]";
     bufferItems = [];
@@ -147,7 +142,7 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
       flushTimer = null;
     }
 
-    inFlight = true;
+    inFlightCount++;
 
     const bodyBuffer = Buffer.byteLength(body, "utf8");
     const reqOptions = {
@@ -159,11 +154,7 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
     };
 
     const onComplete = () => {
-      inFlight = false;
-      if (pendingFlush) {
-        pendingFlush = false;
-        flush();
-      }
+      inFlightCount--;
     };
 
     const req = requestFn(reqOptions, (res) => {

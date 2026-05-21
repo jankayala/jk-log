@@ -817,6 +817,33 @@ describe("writers", () => {
     expect(logSpy).toHaveBeenCalledWith("default");
   });
 
+  it("multi-writer path handles zero args", () => {
+    const w1 = vi.fn() as unknown as LogWriter;
+    const w2 = vi.fn() as unknown as LogWriter;
+    const l = createLogger({ logLevel: "trace", writers: [w1, w2] });
+    l.log();
+    expect(w1).toHaveBeenCalledWith("log");
+    expect(w2).toHaveBeenCalledWith("log");
+  });
+
+  it("multi-writer path handles two args", () => {
+    const w1 = vi.fn() as unknown as LogWriter;
+    const w2 = vi.fn() as unknown as LogWriter;
+    const l = createLogger({ logLevel: "trace", writers: [w1, w2] });
+    l.log("a", "b");
+    expect(w1).toHaveBeenCalledWith("log", "a", "b");
+    expect(w2).toHaveBeenCalledWith("log", "a", "b");
+  });
+
+  it("multi-writer path handles three+ args", () => {
+    const w1 = vi.fn() as unknown as LogWriter;
+    const w2 = vi.fn() as unknown as LogWriter;
+    const l = createLogger({ logLevel: "trace", writers: [w1, w2] });
+    l.log("a", "b", "c");
+    expect(w1).toHaveBeenCalledWith("log", "a", "b", "c");
+    expect(w2).toHaveBeenCalledWith("log", "a", "b", "c");
+  });
+
   it("writer logLevel overrides logger logLevel", () => {
     const w1 = Object.assign(vi.fn() as unknown as LogWriter, { logLevel: "error" as const });
     const w2 = vi.fn() as unknown as LogWriter;

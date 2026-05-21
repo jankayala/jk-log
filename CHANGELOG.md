@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Performance: single-writer fast path** — when only one writer is configured (the common case), the logger bypasses the writer loop entirely, eliminating iterator overhead and enabling V8 to inline the call.
+- **Performance: faster JSON serialization** — `stringifyJsonLog` now attempts plain `JSON.stringify` first and only falls back to the expensive replacer (circular-ref/BigInt handling) when the fast path throws. Most payloads avoid the replacer entirely.
+- **Performance: pre-computed metadata** — `Object.entries(metadata)` and the serialized metadata suffix are computed once at logger creation time instead of on every log call, removing per-call allocations.
+- **Performance: avoid argument spreading** — writer invocations now use a `switch` on `args.length` (0, 1, 2) to call writers without spread for the common cases, reducing array frame allocations.
+- **Performance: HTTP writer concurrent requests** — `httpWriter` no longer serializes requests behind a single in-flight gate. Multiple batches can now be in flight concurrently (up to `maxSockets`), eliminating head-of-line blocking.
+
 ## [v2.1.1] - 2026-05-21
 
 ### Changed

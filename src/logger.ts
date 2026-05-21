@@ -203,25 +203,27 @@ function countDefined(values: unknown[]): number {
 }
 
 function stringifyJsonLog(payload: JsonLogOutput): string {
-  const seen = new WeakSet<object>();
-
   try {
-    return JSON.stringify(payload, (_key, value: unknown) => {
-      if (typeof value === "bigint") return value.toString();
-
-      if (typeof value === "object" && value !== null) {
-        if (seen.has(value)) return "[Circular]";
-        seen.add(value);
-      }
-
-      return value;
-    });
+    return JSON.stringify(payload);
   } catch {
-    return JSON.stringify({
-      level: payload.level,
-      timestamp: payload.timestamp,
-      message: "[Unserializable log payload]",
-    });
+    // Fallback: handle circular references and BigInt
+    const seen = new WeakSet<object>();
+    try {
+      return JSON.stringify(payload, (_key, value: unknown) => {
+        if (typeof value === "bigint") return value.toString();
+        if (typeof value === "object" && value !== null) {
+          if (seen.has(value)) return "[Circular]";
+          seen.add(value);
+        }
+        return value;
+      });
+    } catch {
+      return JSON.stringify({
+        level: payload.level,
+        timestamp: payload.timestamp,
+        message: "[Unserializable log payload]",
+      });
+    }
   }
 }
 
@@ -384,6 +386,13 @@ export function createLogger(options?: LoggerOptions): Logger {
   };
   let effectiveMin = computeEffectiveMin();
 
+  // Pre-compute metadata fields at logger creation time
+  const metaKeys = Object.keys(metadata);
+  const hasMetadata = metaKeys.length > 0;
+  const preSerializedMeta = hasMetadata ? ` ${JSON.stringify(metadata)}` : "";
+  // For JSON format, pre-compute metadata entries to avoid Object.entries() in hot path
+  const jsonMetaEntries: [string, unknown][] = hasMetadata ? Object.entries(metadata) : [];
+
   const formatArg = (value: unknown): string => {
     if (typeof value === "string") return value;
     if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
@@ -409,7 +418,8 @@ export function createLogger(options?: LoggerOptions): Logger {
       } else if (args.length === 1) {
         jsonOutput.data = args[0];
       }
-      for (const [key, value] of Object.entries(metadata)) {
+      for (let i = 0; i < jsonMetaEntries.length; i++) {
+        const [key, value] = jsonMetaEntries[i]!;
         if (!(key in jsonOutput)) {
           jsonOutput[key] = value;
         }
@@ -425,10 +435,10 @@ export function createLogger(options?: LoggerOptions): Logger {
       message += formatArg(args[i]);
     }
     const prefix = showTime ? `${new Date().toISOString()} ${coloredLabel}` : coloredLabel;
-    const metaKeys = Object.keys(metadata);
-    const metaSuffix = metaKeys.length > 0 ? ` ${JSON.stringify(metadata)}` : "";
     const prefixed =
-      message.length > 0 ? `${prefix} ${message}${metaSuffix}` : `${prefix}${metaSuffix}`;
+      message.length > 0
+        ? `${prefix} ${message}${preSerializedMeta}`
+        : `${prefix}${preSerializedMeta}`;
     return [prefixed];
   };
 
@@ -439,16 +449,49 @@ export function createLogger(options?: LoggerOptions): Logger {
     effectiveMin = computeEffectiveMin();
   };
 
-  // helper log functions that respect configured level
-  const callLog = (method: MethodLogLevel, args: unknown[]) => {
-    if (!writers) return;
+  // Single-writer fast path
+  const singleWriter = writers && writers.length === 1 ? writers[0] : null;
 
-    for (const writer of writers) {
-      const writerMin = writer.logLevel !== undefined ? ALL_LEVEL_WEIGHTS[writer.logLevel] : min;
-      if (ALL_LEVEL_WEIGHTS[method] < writerMin) continue;
-      writer(method, ...args);
-    }
-  };
+  const callLog = singleWriter
+    ? (method: MethodLogLevel, args: unknown[]) => {
+        const writerMin =
+          singleWriter.logLevel !== undefined ? ALL_LEVEL_WEIGHTS[singleWriter.logLevel] : min;
+        if (ALL_LEVEL_WEIGHTS[method] < writerMin) return;
+        switch (args.length) {
+          case 0:
+            singleWriter(method);
+            break;
+          case 1:
+            singleWriter(method, args[0]);
+            break;
+          case 2:
+            singleWriter(method, args[0], args[1]);
+            break;
+          default:
+            singleWriter(method, ...args);
+        }
+      }
+    : (method: MethodLogLevel, args: unknown[]) => {
+        if (!writers) return;
+        for (const writer of writers) {
+          const writerMin =
+            writer.logLevel !== undefined ? ALL_LEVEL_WEIGHTS[writer.logLevel] : min;
+          if (ALL_LEVEL_WEIGHTS[method] < writerMin) continue;
+          switch (args.length) {
+            case 0:
+              writer(method);
+              break;
+            case 1:
+              writer(method, args[0]);
+              break;
+            case 2:
+              writer(method, args[0], args[1]);
+              break;
+            default:
+              writer(method, ...args);
+          }
+        }
+      };
 
   const base = {
     log(...args: unknown[]) {
