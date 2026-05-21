@@ -1,6 +1,6 @@
 {
   "name": "jk-log",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "A tiny Node.js utility that enhances console.log with ANSI colors and formatting, making terminal output cleaner, more readable, and visually expressive with minimal setup.",
   "repository": {
     "type": "git",
@@ -57,11 +57,11 @@
     "coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@types/node": "25.9.0",
-    "@vitest/coverage-v8": "4.1.6",
+    "@types/node": "25.9.1",
+    "@vitest/coverage-v8": "4.1.7",
     "prettier": "3.8.3",
     "tsdown": "0.22.0",
     "typescript": "6.0.3",
-    "vitest": "4.1.6"
+    "vitest": "4.1.7"
   }
 }

@@ -401,6 +401,13 @@ describe("createLogger and LOG_LEVEL behavior", () => {
     debugSpy2.mockRestore();
   });
 
+  it("warn is suppressed when logLevel is above warn", () => {
+    const writer = vi.fn() as unknown as LogWriter;
+    const l = createLogger({ logLevel: "error", writers: [writer] });
+    l.warn("should not appear");
+    expect(writer).not.toHaveBeenCalled();
+  });
+
   it("showTime=true prefixes info output with ISO timestamp and [INFO]", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2023-11-07T14:20:35.123Z"));

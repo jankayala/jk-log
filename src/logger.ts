@@ -370,6 +370,20 @@ export function createLogger(options?: LoggerOptions): Logger {
   let currentLevel = resolve(options?.logLevel);
   let min = ALL_LEVEL_WEIGHTS[currentLevel];
 
+  // Effective minimum across all writers (used for early exit in level methods)
+  const computeEffectiveMin = (): number => {
+    if (!writers) return min;
+    let effective = min;
+    for (const writer of writers) {
+      if (writer.logLevel !== undefined) {
+        const wMin = ALL_LEVEL_WEIGHTS[writer.logLevel];
+        if (wMin < effective) effective = wMin;
+      }
+    }
+    return effective;
+  };
+  let effectiveMin = computeEffectiveMin();
+
   const formatArg = (value: unknown): string => {
     if (typeof value === "string") return value;
     if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
@@ -422,6 +436,7 @@ export function createLogger(options?: LoggerOptions): Logger {
     const resolved = resolve(level as any);
     currentLevel = resolved;
     min = ALL_LEVEL_WEIGHTS[resolved];
+    effectiveMin = computeEffectiveMin();
   };
 
   // helper log functions that respect configured level
@@ -449,21 +464,27 @@ export function createLogger(options?: LoggerOptions): Logger {
       callLog("log", args);
     },
     trace(...args: unknown[]) {
+      if (10 < effectiveMin) return;
       callLog("trace", withPrefix("trace", args));
     },
     debug(...args: unknown[]) {
+      if (20 < effectiveMin) return;
       callLog("debug", withPrefix("debug", args));
     },
     info(...args: unknown[]) {
+      if (30 < effectiveMin) return;
       callLog("info", withPrefix("info", args));
     },
     warn(...args: unknown[]) {
+      if (40 < effectiveMin) return;
       callLog("warn", withPrefix("warn", args));
     },
     error(...args: unknown[]) {
+      if (50 < effectiveMin) return;
       callLog("error", withPrefix("error", args));
     },
     fatal(...args: unknown[]) {
+      if (60 < effectiveMin) return;
       callLog("fatal", withPrefix("fatal", args));
     },
     setLevel(level?: LogLevel) {
