@@ -631,4 +631,4 @@ export function createLogger(options?: LoggerOptions): Logger {
  * logger.info("Hello, world!");
  * ```
  */
-export const logger = createLogger({ writers: [consoleWriter()] });
+export const logger: Logger = createLogger({ writers: [consoleWriter()] });

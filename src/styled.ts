@@ -53,11 +53,11 @@ export const MODIFIER_CODES = {
   overline: [53, 55],
 } as const;
 
-export const ANSI_CODES = {
+export const ANSI_CODES: typeof COLOR_CODES & typeof BG_COLOR_CODES & typeof MODIFIER_CODES = {
   ...COLOR_CODES,
   ...BG_COLOR_CODES,
   ...MODIFIER_CODES,
-} as const;
+};
 
 export type ColorName = keyof typeof COLOR_CODES;
 export type BgColorName = keyof typeof BG_COLOR_CODES;

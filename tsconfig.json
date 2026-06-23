@@ -9,6 +9,8 @@
     "exactOptionalPropertyTypes": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
+    "declaration": true,
+    "isolatedDeclarations": true,
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"]

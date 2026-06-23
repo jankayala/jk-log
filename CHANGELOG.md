@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.1.3] - 2026-06-23
+
+### Changed
+
+- **Build performance: 18x faster** — switched DTS generation from tsc to Oxc via `isolatedDeclarations`, and enabled CJS re-export stubs to avoid a full second type-checking pass. Build time dropped from ~12s to ~700ms.
+- **Type safety** — added explicit type annotations on `ANSI_CODES` and `logger` for `isolatedDeclarations` compliance, catching previously implicit export types.
+
 ## [v2.1.2] - 2026-05-22
 
 ### Changed
