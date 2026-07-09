@@ -59,7 +59,7 @@
   "devDependencies": {
     "@types/node": "26.0.0",
     "@vitest/coverage-v8": "4.1.9",
-    "prettier": "3.8.4",
+    "prettier": "3.9.5",
     "tsdown": "0.22.3",
     "typescript": "6.0.3",
     "vitest": "4.1.9"
