@@ -57,7 +57,7 @@
     "coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@types/node": "26.0.0",
+    "@types/node": "26.1.2",
     "@vitest/coverage-v8": "4.1.9",
     "prettier": "3.8.4",
     "tsdown": "0.22.3",
