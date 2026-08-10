@@ -19,11 +19,11 @@ export function shouldUseColor(): boolean {
   let result: boolean;
 
   // NO_COLOR wins over everything else
-  if (env?.["NO_COLOR"] !== undefined && env["NO_COLOR"] !== "") {
+  if (env?.NO_COLOR !== undefined && env.NO_COLOR !== "") {
     result = false;
   }
   // FORCE_COLOR overrides TTY detection
-  else if (env?.["FORCE_COLOR"] !== undefined && env["FORCE_COLOR"] !== "") {
+  else if (env?.FORCE_COLOR !== undefined && env.FORCE_COLOR !== "") {
     result = true;
   }
   // Fall back to TTY detection
@@ -54,6 +54,7 @@ export function invalidateColorCache(): void {
 
 /** Regex that matches all ANSI escape sequences (SGR, OSC, CSI, etc.). */
 const ANSI_ESCAPE_RE =
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape sequences are control characters by design.
   /[\u001B\u009B][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><~]/g;
 
 /**

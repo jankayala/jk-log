@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { shouldUseColor, stripAnsi, isBrowser, invalidateColorCache } from "@/color-support";
+import { invalidateColorCache, isBrowser, shouldUseColor, stripAnsi } from "@/color-support";
 import { styled } from "@/styled";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
  *
  * Run: FORCE_COLOR=1 npx tsx examples/05-inline-style-options.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 const logger = createLogger({ writers: [consoleWriter()] });
 

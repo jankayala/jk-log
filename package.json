@@ -26,6 +26,7 @@
     "node": ">=18"
   },
   "type": "module",
+  "sideEffects": false,
   "source": "./src/index.ts",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -50,16 +51,25 @@
     "LICENSE"
   ],
   "scripts": {
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "check": "biome check .",
     "build": "tsdown",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,mjs,cjs,json}": "biome check --write --no-errors-on-unmatched"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.7",
     "@types/node": "26.2.0",
     "@vitest/coverage-v8": "4.1.10",
-    "prettier": "3.9.6",
+    "husky": "9.1.7",
+    "lint-staged": "15.5.2",
     "tsdown": "0.22.14",
     "typescript": "7.0.2",
     "vitest": "4.1.10"

@@ -6,7 +6,7 @@
  *
  * Run: FORCE_COLOR=1 npx tsx examples/06-logger-styled-methods.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 const logger = createLogger({ writers: [consoleWriter()] });
 

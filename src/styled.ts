@@ -295,11 +295,7 @@ function createStyledWith(
   newStyle: AppliedStyle,
   analysis: StyleAnalysis,
 ): Styled {
-  const next = new Array<AppliedStyle>(existing.length + 1);
-  for (let i = 0; i < existing.length; i++) {
-    next[i] = existing[i]!;
-  }
-  next[existing.length] = newStyle;
+  const next = [...existing, newStyle];
   return createStyled(next, extendAnalysis(analysis, newStyle));
 }
 
@@ -312,8 +308,8 @@ function createStyled(
       return text;
     }
     let result = text;
-    for (let i = 0; i < styles.length; i++) {
-      result = applyStyle(result, styles[i]!);
+    for (const style of styles) {
+      result = applyStyle(result, style);
     }
     return result;
   }) as Styled;

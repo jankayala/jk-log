@@ -1,15 +1,15 @@
-import {
-  styled,
-  ANSI_CODES,
-  type StyleName,
-  type ColorName,
-  type BgColorName,
-  type ModifierName,
-} from "@/styled";
-import { shouldUseColor } from "@/color-support";
-import { consoleWriter } from "@/writers";
-import type { LogWriter } from "@/writers";
 import { inspect } from "node:util";
+import { shouldUseColor } from "@/color-support";
+import {
+  ANSI_CODES,
+  type BgColorName,
+  type ColorName,
+  type ModifierName,
+  type StyleName,
+  styled,
+} from "@/styled";
+import type { LogWriter } from "@/writers";
+import { consoleWriter } from "@/writers";
 
 /**
  * Pretty-prints a value using `util.inspect` for readable output in plain format.
@@ -361,7 +361,7 @@ export function createLogger(options?: LoggerOptions): Logger {
   };
 
   const isConfigLevel = (value: string): value is LogLevel =>
-    Object.prototype.hasOwnProperty.call(DEFAULT_LEVEL_LABELS, value) || value === "silent";
+    Object.hasOwn(DEFAULT_LEVEL_LABELS, value) || value === "silent";
 
   const resolve = (opt?: string): LogLevel => {
     if (typeof opt === "string" && isConfigLevel(opt)) return opt;
@@ -418,8 +418,7 @@ export function createLogger(options?: LoggerOptions): Logger {
       } else if (args.length === 1) {
         jsonOutput.data = args[0];
       }
-      for (let i = 0; i < jsonMetaEntries.length; i++) {
-        const [key, value] = jsonMetaEntries[i]!;
+      for (const [key, value] of jsonMetaEntries) {
         if (!(key in jsonOutput)) {
           jsonOutput[key] = value;
         }

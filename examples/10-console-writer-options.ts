@@ -3,7 +3,7 @@
  *
  * Run: npx tsx examples/10-console-writer-options.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 // Remap all levels to console.log (useful when console.debug is filtered)
 const writer = consoleWriter({

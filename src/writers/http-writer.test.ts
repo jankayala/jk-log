@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { httpWriter } from "@/writers";
 
 // Mock node:http
@@ -307,12 +307,6 @@ describe("httpWriter", () => {
   });
 
   it("sends concurrent requests without head-of-line blocking", () => {
-    // Override mock to NOT auto-fire "end", so first request stays in-flight
-    let endCallback: (() => void) | null = null;
-    fakeResOn.mockImplementation((_event: string, cb: () => void) => {
-      if (_event === "end") endCallback = cb;
-    });
-
     const writer = httpWriter({ url: "http://localhost:3000/rpc", batchSize: 1 });
     writer("info", "first");
     expect(httpRequest).toHaveBeenCalledTimes(1);
@@ -320,9 +314,6 @@ describe("httpWriter", () => {
     // Write another entry — should send immediately without waiting for first to complete
     writer("info", "second");
     expect(httpRequest).toHaveBeenCalledTimes(2);
-
-    // Complete the first request
-    endCallback!();
   });
 
   it("flushes via queueMicrotask when flushInterval is 0", async () => {

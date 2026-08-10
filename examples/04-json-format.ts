@@ -3,7 +3,7 @@
  *
  * Run: npx tsx examples/04-json-format.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 const jsonLogger = createLogger({
   format: "json",

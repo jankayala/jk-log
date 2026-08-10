@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import * as index from "@/index";
 
 describe("index re-exports", () => {
@@ -19,7 +19,7 @@ describe("index re-exports", () => {
     // helpers; it's not a raw function, so assert it's an object and that
     // the `log` method exists and is a function.
     expect(typeof index.logger).toBe("object");
-    expect(typeof (index.logger as any).log).toBe("function");
+    expect(typeof index.logger.log).toBe("function");
   });
 
   it("exports styled", () => {

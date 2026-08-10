@@ -7,7 +7,7 @@
  *
  * Run: npx tsx examples/12-http-writer.ts
  */
-import { createLogger, consoleWriter, httpWriter } from "jk-log";
+import { consoleWriter, createLogger, httpWriter } from "jk-log";
 
 const http = httpWriter({
   url: "http://localhost:9999/logs",

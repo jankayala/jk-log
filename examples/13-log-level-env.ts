@@ -4,7 +4,7 @@
  * Run: LOG_LEVEL=debug npx tsx examples/13-log-level-env.ts
  * Run: LOG_LEVEL=error npx tsx examples/13-log-level-env.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 // When no explicit logLevel is passed, createLogger reads LOG_LEVEL from env
 const logger = createLogger({ writers: [consoleWriter()] });

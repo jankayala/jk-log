@@ -1,14 +1,14 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  styled,
-  type ColorName,
+  ANSI_CODES,
+  BG_COLOR_CODES,
   type BgColorName,
+  COLOR_CODES,
+  type ColorName,
+  MODIFIER_CODES,
   type ModifierName,
   type StyleOptions,
-  ANSI_CODES,
-  COLOR_CODES,
-  BG_COLOR_CODES,
-  MODIFIER_CODES,
+  styled,
 } from "@/styled";
 
 const validStyleOptionsSamples: StyleOptions[] = [
@@ -94,12 +94,12 @@ describe("styled", () => {
     );
 
     it("should throw when multiple text colors are chained (dot notation)", () => {
-      // @ts-ignore
+      // @ts-expect-error
       expect(() => styled.red.blue("Hello")).toThrow();
     });
 
     it("should throw when multiple text colors are chained (rgb)", () => {
-      // @ts-ignore
+      // @ts-expect-error
       expect(() => styled.red.rgb(50, 50, 50)("Hello")).toThrow();
     });
 
@@ -149,25 +149,25 @@ describe("styled", () => {
     );
 
     it("should throw when multiple background colors are chained (dot notation)", () => {
-      // @ts-ignore
+      // @ts-expect-error
       expect(() => styled.bgRed.bgBlue("Hello")).toThrow();
     });
 
     it("should throw when multiple background colors are chained (bgRgb)", () => {
-      // @ts-ignore
+      // @ts-expect-error
       expect(() => styled.bgRed.bgRgb(10, 20, 30)("Hello")).toThrow();
     });
 
     it("throws when chaining a background hex after an existing background color", () => {
       expect(() => {
-        // @ts-ignore
+        // @ts-expect-error
         styled.bgRed.bgHex("#fff")("text");
       }).toThrow(/Cannot chain multiple background colors/);
     });
 
     it("throws when chaining bgHex after bgRgb", () => {
       expect(() => {
-        // @ts-ignore
+        // @ts-expect-error
         styled.bgRgb(1, 2, 3).bgHex("#000")("x");
       }).toThrow(/Cannot chain multiple background colors/);
     });

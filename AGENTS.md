@@ -10,7 +10,8 @@
 - **Module system:** ESM (`"type": "module"` in package.json), dual CJS/ESM output
 - **Bundler:** tsdown (entry: `src/index.ts`, outputs ESM `.mjs`, CJS `.cjs`, `.d.mts`)
 - **Test framework:** Vitest (v4) with `@vitest/coverage-v8`
-- **Formatter:** Prettier
+- **Formatter & linter:** Biome (all-in-one lint + format + import organization)
+- **Git hooks:** husky 9 + lint-staged 15 — `.husky/pre-commit` runs `npx lint-staged` (Biome `check --write` on staged files), then `npm run lint` + `npm run typecheck`. Hooks are skipped with `HUSKY=0` or `git commit --no-verify`.
 - **Path aliases:** `@/*` → `./src/*` (configured in `tsconfig.json`, resolved by tsdown/vitest)
 - **No runtime dependencies** — everything is self-contained
 
@@ -69,13 +70,16 @@ src/
 
 ## Build & Development Commands
 
-| Command                | Description                      |
-| ---------------------- | -------------------------------- |
-| `npm run build`        | Bundle with tsdown → `dist/`     |
-| `npm test`             | Run all Vitest tests             |
-| `npm run coverage`     | Run tests with V8 coverage       |
-| `npm run format`       | Format all files with Prettier   |
-| `npm run format:check` | Check formatting without writing |
+| Command                | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `npm run build`        | Bundle with tsdown → `dist/`                  |
+| `npm test`             | Run all Vitest tests                          |
+| `npm run coverage`     | Run tests with V8 coverage                    |
+| `npm run format`       | Format all files with Biome                   |
+| `npm run format:check` | Check formatting without writing (Biome)      |
+| `npm run lint`         | Lint all files with Biome                     |
+| `npm run check`        | Format + lint + organize imports (Biome)      |
+| `npm run typecheck`    | Type-check all sources with `tsc --noEmit`    |
 
 ## Testing Conventions
 

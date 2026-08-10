@@ -1,16 +1,13 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { invalidateColorCache } from "@/color-support";
 import {
   createLogger,
-  logger,
-  DEFAULT_LEVEL_LABELS,
   DEFAULT_LEVEL_COLORS,
+  DEFAULT_LEVEL_LABELS,
   type LogWriter,
+  logger,
 } from "@/logger";
 import { consoleWriter, fileWriter } from "@/writers";
-import { readFileSync, unlinkSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { stripAnsi, invalidateColorCache } from "@/color-support";
 
 describe("logger.ts)", () => {
   const originalForce = process.env["FORCE_COLOR"];
@@ -245,7 +242,7 @@ describe("logger.ts)", () => {
 
   it("supports rgb/hex chain after an initial style (exercises createSimpleStyled branches)", () => {
     // chaining a hex text style after an existing text style should now throw
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => logger.red.rgb(1, 2, 3)("chained rgb")).toThrow();
 
     // chaining a bgHex after a modifier (no foreground conflict) is allowed
@@ -263,7 +260,7 @@ describe("logger.ts)", () => {
     expect(calledBgRgb).toContain("\x1b[48;2;7;8;9m");
 
     // chaining a hex text style after an existing text style should now throw
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => logger.red.hex("#112233")("chained hex")).toThrow();
   });
 

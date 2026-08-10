@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, afterAll, beforeAll, beforeEach } from "vitest";
-import { fileWriter } from "@/writers";
-import { readFileSync, unlinkSync, existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { fileWriter } from "@/writers";
 
 describe("fileWriter", () => {
   const testFile = join(tmpdir(), `jk-log-fw-test-${Date.now()}.log`);

@@ -3,7 +3,7 @@
  *
  * Run: npx tsx examples/07-child-loggers.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 const rootLogger = createLogger({
   showTime: true,

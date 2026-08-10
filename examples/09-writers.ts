@@ -4,9 +4,10 @@
  * Run: npx tsx examples/09-writers.ts
  * Check: cat examples/app.log
  */
-import { createLogger, consoleWriter, fileWriter } from "jk-log";
-import { fileURLToPath } from "node:url";
+
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { consoleWriter, createLogger, fileWriter } from "jk-log";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

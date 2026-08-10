@@ -1,6 +1,6 @@
-import { stripAnsi } from "@/color-support";
 import { Agent, request as httpRequest } from "node:http";
 import { Agent as HttpsAgent, request as httpsRequest } from "node:https";
+import { stripAnsi } from "@/color-support";
 import type { LogLevel, MethodLogLevel } from "@/logger";
 import type { LogWriter } from "./types";
 
@@ -128,12 +128,12 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
   let flushScheduled = false;
   let destroyed = false;
-  let inFlightCount = 0;
 
   function flush() {
     if (bufferItems.length === 0) return;
 
-    const body = bufferItems.length === 1 ? bufferItems[0]! : "[" + bufferItems.join(",") + "]";
+    const body =
+      bufferItems.length === 1 ? (bufferItems[0] as string) : `[${bufferItems.join(",")}]`;
     bufferItems = [];
     bufferBytes = 0;
     flushScheduled = false;
@@ -141,8 +141,6 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
       clearTimeout(flushTimer);
       flushTimer = null;
     }
-
-    inFlightCount++;
 
     const bodyBuffer = Buffer.byteLength(body, "utf8");
     const reqOptions = {
@@ -153,15 +151,9 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
       },
     };
 
-    const onComplete = () => {
-      inFlightCount--;
-    };
-
     const req = requestFn(reqOptions, (res) => {
       res.resume(); // Consume response to free socket back to pool
-      res.on("end", onComplete);
     });
-    req.on("error", onComplete); // Complete on error too
     req.on("timeout", () => {
       req.destroy();
     });
@@ -197,9 +189,9 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
       const arg = args[0];
       if (typeof arg === "string") {
         const val = shouldStrip ? stripAnsi(arg) : arg;
-        messagesJson = "[" + JSON.stringify(val) + "]";
+        messagesJson = `[${JSON.stringify(val)}]`;
       } else {
-        messagesJson = "[" + safeStringify(arg) + "]";
+        messagesJson = `[${safeStringify(arg)}]`;
       }
     } else {
       const parts: string[] = [];
@@ -212,25 +204,14 @@ export function httpWriter(options: HttpWriterOptions): LogWriter {
           parts.push(safeStringify(arg));
         }
       }
-      messagesJson = "[" + parts.join(",") + "]";
+      messagesJson = `[${parts.join(",")}]`;
     }
 
     // Safe counter wrap to prevent exceeding Number.MAX_SAFE_INTEGER
     idCounter = (idCounter % Number.MAX_SAFE_INTEGER) + 1;
     const id = idCounter;
 
-    const serialized =
-      '{"jsonrpc":"2.0","method":"' +
-      rpcMethod +
-      '","params":{"level":"' +
-      level +
-      '","messages":' +
-      messagesJson +
-      ',"timestamp":"' +
-      new Date().toISOString() +
-      '"},"id":' +
-      id +
-      "}";
+    const serialized = `{"jsonrpc":"2.0","method":"${rpcMethod}","params":{"level":"${level}","messages":${messagesJson},"timestamp":"${new Date().toISOString()}"},"id":${id}}`;
 
     bufferItems.push(serialized);
     bufferBytes += serialized.length;

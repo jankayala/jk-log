@@ -3,7 +3,7 @@
  *
  * Run: npx tsx examples/08-metadata.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 // Plain format — metadata is appended as JSON
 const plainLogger = createLogger({

@@ -89,7 +89,7 @@ npm run format
 npm test
 ```
 
-Make sure the build succeeds, files are Prettier-formatted, and all tests pass.
+Make sure the build succeeds, files are Biome-formatted, and all tests pass.
 
 ### 5. Commit the changes
 

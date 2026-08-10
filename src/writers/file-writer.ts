@@ -1,11 +1,11 @@
 import {
-  openSync,
-  writeSync,
-  writeFileSync,
   closeSync,
-  statSync,
-  renameSync,
   existsSync,
+  openSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+  writeSync,
 } from "node:fs";
 import { stripAnsi } from "@/color-support";
 import type { LogLevel, MethodLogLevel } from "@/logger";
@@ -187,7 +187,7 @@ export function fileWriter(options: FileWriterOptions): LogWriter {
 
   let destroyed = false;
 
-  const writer: LogWriter = (level: MethodLogLevel, ...args: unknown[]) => {
+  const writer: LogWriter = (_level: MethodLogLevel, ...args: unknown[]) => {
     if (destroyed) return;
     const parts = args.map((arg) => {
       if (typeof arg === "string") return arg;
@@ -204,7 +204,7 @@ export function fileWriter(options: FileWriterOptions): LogWriter {
       line = stripAnsi(line);
     }
 
-    buffer += line + "\n";
+    buffer += `${line}\n`;
 
     if (maxBuffer === 0 || buffer.length >= maxBuffer) {
       flush();

@@ -3,7 +3,7 @@
  *
  * Run: npx tsx examples/03-create-logger.ts
  */
-import { createLogger, consoleWriter } from "jk-log";
+import { consoleWriter, createLogger } from "jk-log";
 
 // Logger with timestamps
 const timedLogger = createLogger({
