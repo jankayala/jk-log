@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Benchmark script** — new `bench/index.mjs` (zero-dependency, built on `node:perf_hooks`) measures the cached color check, `stripAnsi`, `styled`, the logger fast/suppressed paths, JSON format, and chainable styled methods so future perf work can be measured instead of assumed. Run with `npm run bench` (builds first).
+- **Biome linting + type checking** — Biome (a Rust-based all-in-one linter, formatter, and import organizer) replaces Prettier via a new `biome.json` that matches the previous style (2-space, double quotes, trailing commas, 100 cols). Added `npm run lint`, `npm run check`, and `npm run typecheck` scripts; CI now runs `npm run check` and `npm run typecheck`.
+- **Pre-commit hooks** — husky 9 + lint-staged 15: staged files are auto-formatted/linted with Biome (`check --write`), then `npm run lint` + `npm run typecheck` run before every commit.
+- **`"sideEffects": false`** in `package.json` — lets bundlers tree-shake the library.
+
+### Changed
+
+- **Reduced color-stub boilerplate in tests** — new `src/test-utils.ts` helper (`withColors({ force, noColor, isTTY }, fn)` and `setColorEnv(options)`) centralizes env manipulation plus `invalidateColorCache()` calls, trimming ~300 lines across the `color-support`, `logger`, `styled`, and `file-writer` test suites.
+- **Source cleanups** — `Object.hasOwn` instead of `Object.prototype.hasOwnProperty.call` in the logger, `for...of` loops over arrays in `styled`/`logger`, template literals in `fileWriter`/`httpWriter`, and a pre-resolved `methodFor` lookup table in `consoleWriter` (no behavior changes).
+
+### Removed
+
+- **Dead in-flight counter in `httpWriter`** — dropped the leaky `inFlightCount` that never decremented on request timeout; requests now run fully concurrently.
+
 ## [v2.1.4] - 2026-08-08
 
 ### Changed

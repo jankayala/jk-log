@@ -1,5 +1,4 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { invalidateColorCache } from "@/color-support";
 import {
   createLogger,
   DEFAULT_LEVEL_COLORS,
@@ -7,28 +6,20 @@ import {
   type LogWriter,
   logger,
 } from "@/logger";
+import { setColorEnv, withColors } from "@/test-utils";
 import { consoleWriter, fileWriter } from "@/writers";
 
 describe("logger.ts)", () => {
-  const originalForce = process.env["FORCE_COLOR"];
-  const originalNoColor = process.env["NO_COLOR"];
-
+  let restoreColorEnv: () => void;
   let logSpy: ReturnType<typeof vi.spyOn>;
 
   beforeAll(() => {
     // Ensure colors are enabled for styling expectations
-    process.env["FORCE_COLOR"] = "1";
-    delete process.env["NO_COLOR"];
-    invalidateColorCache();
+    restoreColorEnv = setColorEnv({ force: true });
   });
 
   afterAll(() => {
-    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
-    else process.env["FORCE_COLOR"] = originalForce;
-
-    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
-    else process.env["NO_COLOR"] = originalNoColor;
-    invalidateColorCache();
+    restoreColorEnv?.();
   });
 
   beforeEach(() => {
@@ -420,85 +411,53 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("showTime=false still prefixes info output with [INFO]", () => {
-    const originalForce = process.env["FORCE_COLOR"];
-    const originalNoColor = process.env["NO_COLOR"];
-    delete process.env["FORCE_COLOR"];
-    process.env["NO_COLOR"] = "1";
-    invalidateColorCache();
+    withColors({ noColor: true }, () => {
+      const l = createLogger({ showTime: false, writers: [consoleWriter()] });
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      l.info("Text");
 
-    const l = createLogger({ showTime: false, writers: [consoleWriter()] });
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    l.info("Text");
+      expect(infoSpy).toHaveBeenCalledWith("[INFO] Text");
 
-    expect(infoSpy).toHaveBeenCalledWith("[INFO] Text");
-
-    infoSpy.mockRestore();
-    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
-    else process.env["FORCE_COLOR"] = originalForce;
-
-    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
-    else process.env["NO_COLOR"] = originalNoColor;
-    invalidateColorCache();
+      infoSpy.mockRestore();
+    });
   });
 
   it("showTime=true colors the label based on level", () => {
-    const originalForce = process.env["FORCE_COLOR"];
-    const originalNoColor = process.env["NO_COLOR"];
-    process.env["FORCE_COLOR"] = "1";
-    delete process.env["NO_COLOR"];
-    invalidateColorCache();
+    withColors({ force: true }, () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2023-11-07T14:20:35.123Z"));
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2023-11-07T14:20:35.123Z"));
+      const l = createLogger({ showTime: true, writers: [consoleWriter()] });
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      l.info("Text");
 
-    const l = createLogger({ showTime: true, writers: [consoleWriter()] });
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    l.info("Text");
+      expect(infoSpy).toHaveBeenCalledWith("2023-11-07T14:20:35.123Z \x1b[34m[INFO]\x1b[39m Text");
 
-    expect(infoSpy).toHaveBeenCalledWith("2023-11-07T14:20:35.123Z \x1b[34m[INFO]\x1b[39m Text");
-
-    infoSpy.mockRestore();
-    vi.useRealTimers();
-
-    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
-    else process.env["FORCE_COLOR"] = originalForce;
-
-    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
-    else process.env["NO_COLOR"] = originalNoColor;
-    invalidateColorCache();
+      infoSpy.mockRestore();
+      vi.useRealTimers();
+    });
   });
 
   it("accepts partial levelLabels overrides and falls back to defaults", () => {
-    const originalForce = process.env["FORCE_COLOR"];
-    const originalNoColor = process.env["NO_COLOR"];
-    delete process.env["FORCE_COLOR"];
-    process.env["NO_COLOR"] = "1";
-    invalidateColorCache();
+    withColors({ noColor: true }, () => {
+      const l = createLogger({
+        showTime: false,
+        levelLabels: { warn: "Warning", error: "!Ahhh..." },
+        writers: [consoleWriter()],
+      });
 
-    const l = createLogger({
-      showTime: false,
-      levelLabels: { warn: "Warning", error: "!Ahhh..." },
-      writers: [consoleWriter()],
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+
+      l.warn("Custom label");
+      l.info("Default label");
+
+      expect(warnSpy).toHaveBeenCalledWith("Warning Custom label");
+      expect(infoSpy).toHaveBeenCalledWith("[INFO] Default label");
+
+      warnSpy.mockRestore();
+      infoSpy.mockRestore();
     });
-
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-
-    l.warn("Custom label");
-    l.info("Default label");
-
-    expect(warnSpy).toHaveBeenCalledWith("Warning Custom label");
-    expect(infoSpy).toHaveBeenCalledWith("[INFO] Default label");
-
-    warnSpy.mockRestore();
-    infoSpy.mockRestore();
-
-    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
-    else process.env["FORCE_COLOR"] = originalForce;
-
-    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
-    else process.env["NO_COLOR"] = originalNoColor;
-    invalidateColorCache();
   });
 
   it("symbol properties on logger and chained styled proxies return undefined", () => {
@@ -655,44 +614,39 @@ describe("createLogger and LOG_LEVEL behavior", () => {
   });
 
   it("plain format handles Error/null/undefined/circular values", () => {
-    const originalForce = process.env["FORCE_COLOR"];
-    const originalNoColor = process.env["NO_COLOR"];
-    delete process.env["FORCE_COLOR"];
-    process.env["NO_COLOR"] = "1";
-    invalidateColorCache();
+    withColors({ noColor: true }, () => {
+      const l = createLogger({ writers: [consoleWriter()] });
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      const err = new Error("boom");
+      delete err.stack;
+      const circular: Record<string, unknown> = { a: 1 };
+      circular.self = circular;
 
-    const l = createLogger({ writers: [consoleWriter()] });
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    const err = new Error("boom");
-    delete err.stack;
-    const circular: Record<string, unknown> = { a: 1 };
-    circular.self = circular;
+      l.info(err, null, undefined, circular);
 
-    l.info(err, null, undefined, circular);
+      expect(infoSpy).toHaveBeenCalledTimes(1);
+      const output = infoSpy.mock.calls[0]![0] as string;
+      expect(output).toContain("[INFO]");
+      expect(output).toContain("boom");
+      expect(output).toContain("null");
+      expect(output).toContain("undefined");
+      // util.inspect handles circular references with [Circular *1]
+      expect(output).toContain("[Circular");
 
-    expect(infoSpy).toHaveBeenCalledTimes(1);
-    const output = infoSpy.mock.calls[0]![0] as string;
-    expect(output).toContain("[INFO]");
-    expect(output).toContain("boom");
-    expect(output).toContain("null");
-    expect(output).toContain("undefined");
-    // util.inspect handles circular references with [Circular *1]
-    expect(output).toContain("[Circular");
-
-    infoSpy.mockRestore();
-    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
-    else process.env["FORCE_COLOR"] = originalForce;
-    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
-    else process.env["NO_COLOR"] = originalNoColor;
-    invalidateColorCache();
+      infoSpy.mockRestore();
+    });
   });
 });
 
 describe("writers", () => {
+  let restoreColorEnv: () => void;
+
   beforeAll(() => {
-    process.env["FORCE_COLOR"] = "1";
-    delete process.env["NO_COLOR"];
-    invalidateColorCache();
+    restoreColorEnv = setColorEnv({ force: true });
+  });
+
+  afterAll(() => {
+    restoreColorEnv?.();
   });
 
   afterEach(() => {
@@ -869,21 +823,14 @@ describe("writers", () => {
 });
 
 describe("metadata and child loggers", () => {
-  const originalForce = process.env["FORCE_COLOR"];
-  const originalNoColor = process.env["NO_COLOR"];
+  let restoreColorEnv: () => void;
 
   beforeAll(() => {
-    delete process.env["FORCE_COLOR"];
-    process.env["NO_COLOR"] = "1";
-    invalidateColorCache();
+    restoreColorEnv = setColorEnv({ noColor: true });
   });
 
   afterAll(() => {
-    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
-    else process.env["FORCE_COLOR"] = originalForce;
-    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
-    else process.env["NO_COLOR"] = originalNoColor;
-    invalidateColorCache();
+    restoreColorEnv?.();
   });
 
   afterEach(() => {
@@ -1142,21 +1089,14 @@ describe("isLevelEnabled", () => {
 });
 
 describe("pretty-printing objects in plain format", () => {
-  const originalForce = process.env["FORCE_COLOR"];
-  const originalNoColor = process.env["NO_COLOR"];
+  let restoreColorEnv: () => void;
 
   beforeAll(() => {
-    delete process.env["FORCE_COLOR"];
-    process.env["NO_COLOR"] = "1";
-    invalidateColorCache();
+    restoreColorEnv = setColorEnv({ noColor: true });
   });
 
   afterAll(() => {
-    if (originalForce === undefined) delete process.env["FORCE_COLOR"];
-    else process.env["FORCE_COLOR"] = originalForce;
-    if (originalNoColor === undefined) delete process.env["NO_COLOR"];
-    else process.env["NO_COLOR"] = originalNoColor;
-    invalidateColorCache();
+    restoreColorEnv?.();
   });
 
   afterEach(() => {
@@ -1212,17 +1152,18 @@ describe("pretty-printing objects in plain format", () => {
   });
 
   it("fatal() logs at fatal level with prefix", () => {
-    vi.stubEnv("FORCE_COLOR", "1");
-    const output: unknown[][] = [];
-    const writer: any = (level: string, ...args: unknown[]) => {
-      output.push([level, ...args]);
-    };
-    const log = createLogger({ logLevel: "trace", writers: [writer] });
-    log.fatal("system down");
-    expect(output.length).toBe(1);
-    expect(output[0]![0]).toBe("fatal");
-    expect(output[0]![1]).toContain("[FATAL]");
-    expect(output[0]![1]).toContain("system down");
+    withColors({ force: true }, () => {
+      const output: unknown[][] = [];
+      const writer: any = (level: string, ...args: unknown[]) => {
+        output.push([level, ...args]);
+      };
+      const log = createLogger({ logLevel: "trace", writers: [writer] });
+      log.fatal("system down");
+      expect(output.length).toBe(1);
+      expect(output[0]![0]).toBe("fatal");
+      expect(output[0]![1]).toContain("[FATAL]");
+      expect(output[0]![1]).toContain("system down");
+    });
   });
 
   it("silent level suppresses all output", () => {

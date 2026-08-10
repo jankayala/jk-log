@@ -59,6 +59,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
+    "bench": "npm run build && node bench/index.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

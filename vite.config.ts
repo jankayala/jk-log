@@ -12,6 +12,7 @@ export default defineConfig({
       provider: "v8",
       exclude: [
         "src/writers/index.ts", // barrel re-export file — no executable statements
+        "src/test-utils.ts", // test-only helper — excluded so coverage reflects production code
       ],
       thresholds: {
         lines: 100,

@@ -2,17 +2,19 @@ import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { setColorEnv } from "@/test-utils";
 import { fileWriter } from "@/writers";
 
 describe("fileWriter", () => {
   const testFile = join(tmpdir(), `jk-log-fw-test-${Date.now()}.log`);
+  let restoreColorEnv: () => void;
 
   beforeAll(() => {
-    process.env["FORCE_COLOR"] = "1";
-    delete process.env["NO_COLOR"];
+    restoreColorEnv = setColorEnv({ force: true });
   });
 
   afterAll(() => {
+    restoreColorEnv?.();
     if (existsSync(testFile)) unlinkSync(testFile);
   });
 

@@ -10,6 +10,7 @@ import {
   type StyleOptions,
   styled,
 } from "@/styled";
+import { setColorEnv } from "@/test-utils";
 
 const validStyleOptionsSamples: StyleOptions[] = [
   { color: "red" },
@@ -52,14 +53,14 @@ void [
 
 describe("styled", () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let restoreColorEnv: () => void;
 
   beforeAll(() => {
-    process.env["FORCE_COLOR"] = "1";
-    delete process.env["NO_COLOR"];
+    restoreColorEnv = setColorEnv({ force: true });
   });
 
   afterAll(() => {
-    delete process.env["FORCE_COLOR"];
+    restoreColorEnv?.();
   });
 
   beforeEach(() => {
@@ -207,13 +208,14 @@ describe("styled", () => {
 });
 
 describe("styled proxy additional coverage", () => {
+  let restoreColorEnv: () => void;
+
   beforeAll(() => {
-    process.env["FORCE_COLOR"] = "1";
-    delete process.env["NO_COLOR"];
+    restoreColorEnv = setColorEnv({ force: true });
   });
 
   afterAll(() => {
-    delete process.env["FORCE_COLOR"];
+    restoreColorEnv?.();
   });
 
   it("returns the original text when a style mapping is missing", () => {
