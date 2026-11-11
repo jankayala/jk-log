@@ -70,16 +70,16 @@ src/
 
 ## Build & Development Commands
 
-| Command                | Description                                   |
-| ---------------------- | --------------------------------------------- |
-| `npm run build`        | Bundle with tsdown → `dist/`                  |
-| `npm test`             | Run all Vitest tests                          |
-| `npm run coverage`     | Run tests with V8 coverage                    |
-| `npm run format`       | Format all files with Biome                   |
-| `npm run format:check` | Check formatting without writing (Biome)      |
-| `npm run lint`         | Lint all files with Biome                     |
-| `npm run check`        | Format + lint + organize imports (Biome)      |
-| `npm run typecheck`    | Type-check all sources with `tsc --noEmit`    |
+| Command                | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `npm run build`        | Bundle with tsdown → `dist/`               |
+| `npm test`             | Run all Vitest tests                       |
+| `npm run coverage`     | Run tests with V8 coverage                 |
+| `npm run format`       | Format all files with Biome                |
+| `npm run format:check` | Check formatting without writing (Biome)   |
+| `npm run lint`         | Lint all files with Biome                  |
+| `npm run check`        | Format + lint + organize imports (Biome)   |
+| `npm run typecheck`    | Type-check all sources with `tsc --noEmit` |
 
 ## Testing Conventions
 

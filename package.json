@@ -66,13 +66,13 @@
     "*.{js,ts,mjs,cjs,json}": "biome check --write --no-errors-on-unmatched"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.14",
-    "@types/node": "26.6.3",
-    "@vitest/coverage-v8": "5.0.2",
+    "@biomejs/biome": "2.6.6",
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
     "husky": "9.1.7",
     "lint-staged": "17.6.0",
-    "tsdown": "0.23.0",
+    "tsdown": "0.23.7",
     "typescript": "7.0.2",
-    "vitest": "5.0.2"
+    "vitest": "5.1.0"
   }
 }
